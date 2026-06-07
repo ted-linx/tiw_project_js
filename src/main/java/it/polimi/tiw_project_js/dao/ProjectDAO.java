@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +40,35 @@ public class ProjectDAO {
             ps.setString(3, "CREATED");
             ps.setString(4, creator);
             ps.setString(5, projectForm.manager());
+            ps.executeUpdate();
+        }
+    }
+
+    public int createProjectAndReturnId(ProjectForm projectForm, String creator) throws SQLException {
+        String query = "INSERT INTO project(title, duration, status, created_by, manager) VALUES(?,?,?,?,?)";
+        try (PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, projectForm.title());
+            ps.setInt(2, projectForm.duration());
+            ps.setString(3, "CREATED");
+            ps.setString(4, creator);
+            ps.setString(5, projectForm.manager());
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        throw new SQLException("Unable to retrieve generated project id");
+    }
+
+    public void updateProject(int id, String title, int duration, String manager) throws SQLException {
+        String query = "UPDATE project SET title = ?, duration = ?, manager = ? WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, title);
+            ps.setInt(2, duration);
+            ps.setString(3, manager);
+            ps.setInt(4, id);
             ps.executeUpdate();
         }
     }
@@ -130,13 +160,8 @@ public class ProjectDAO {
                           FROM worked_hours wh
                           WHERE wh.task_id = t.id
                       ), 0))
-                      OR (
-                          SELECT SUM(ph.hours)
-                          FROM planned_hours ph
-                          WHERE ph.task_id = t.id
-                          ) = 0
                 ) AS has_incomplete_tasks
-            """;
+        """;
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setInt(1, projectId);
@@ -150,7 +175,6 @@ public class ProjectDAO {
         return false;
     }
 
-
     public void completeProject(int projectId) throws SQLException {
         String query = "UPDATE project SET status = 'CONCLUDED' WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -159,58 +183,42 @@ public class ProjectDAO {
         }
     }
 
-
     public boolean canBeAssigned(int projectId) throws SQLException {
-        // Returns true if every task of the project (in CREATED state) has:
-        //   1. at least one assignee
-        //   2. planned hours for every month in [start_month, end_month]
         String query = """
-            SELECT
-                /* does ANY task lack at least one collaborator? */
-                EXISTS (
-                    SELECT 1
-                    FROM project p
-                    JOIN work_package w ON w.project_id = p.id
-                    JOIN task t        ON t.wp_id = w.id
-                    WHERE p.id = ? AND p.status = 'CREATED'
-                      AND NOT EXISTS (
-                            SELECT 1 FROM task_assignee ta WHERE ta.task_id = t.id
-                      )
-                ) AS missing_assignee,
-                /* does ANY task lack planned hours for a full month range? */
-                EXISTS (
-                    SELECT 1
-                    FROM project p
-                    JOIN work_package w ON w.project_id = p.id
-                    JOIN task t        ON t.wp_id = w.id
-                    WHERE p.id = ? AND p.status = 'CREATED'
-                      AND (
-                            SELECT COUNT(*) FROM planned_hours ph
-                            WHERE ph.task_id = t.id
-                      ) < (t.end_month - t.start_month + 1)
-                ) AS missing_hours
-            """;
+            SELECT NOT EXISTS (
+                SELECT 1
+                FROM work_package w
+                LEFT JOIN task t ON t.wp_id = w.id
+                LEFT JOIN planned_hours ph ON ph.task_id = t.id
+                WHERE w.project_id = ?
+                GROUP BY t.id
+                HAVING t.id IS NULL
+                   OR COUNT(ph.month) = 0
+            ) AS can_assign
+        """;
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setInt(1, projectId);
-            ps.setInt(2, projectId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return !rs.getBoolean("missing_assignee") && !rs.getBoolean("missing_hours");
-                }
+                if (rs.next()) return rs.getBoolean("can_assign");
             }
         }
         return false;
     }
 
-    public void updateStatus(int projectId, String newStatus) throws SQLException {
+    public void assignProject(int projectId) throws SQLException {
+        updateProjectStatus(projectId, Project.Status.ASSIGNED);
+    }
+
+    public void updateProjectStatus(int projectId, Project.Status status) throws SQLException {
         String query = "UPDATE project SET status = ? WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, newStatus);
+            ps.setString(1, status.toString());
             ps.setInt(2, projectId);
             ps.executeUpdate();
         }
     }
-    private Project createProjectBean(ResultSet rs) throws SQLException {
+
+    public Project createProjectBean(ResultSet rs) throws SQLException {
         WPDAO wpDAO = new WPDAO(connection);
         List<WP> workPackages = wpDAO.getWPsOfProject(rs.getInt("id"));
         return new Project(

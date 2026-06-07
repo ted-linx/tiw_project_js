@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,27 +33,92 @@ public class TaskDAO {
         }
     }
 
+    public int createTaskAndReturnId(int wpId, int orderNumber, String title, String description, int startMonth, int endMonth) throws SQLException {
+        String query = "INSERT INTO task(order_number, title, description, start_month, end_month, wp_id) VALUES (?,?,?,?,?,?)";
+        try (PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, orderNumber);
+            ps.setString(2, title);
+            ps.setString(3, description);
+            ps.setInt(4, startMonth);
+            ps.setInt(5, endMonth);
+            ps.setInt(6, wpId);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        throw new SQLException("Unable to retrieve generated task id");
+    }
+
+    public void deleteTasksByProject(int projectId) throws SQLException {
+        String deletePlannedHours = "DELETE ph FROM planned_hours ph JOIN task t ON ph.task_id = t.id JOIN work_package w ON t.wp_id = w.id WHERE w.project_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(deletePlannedHours)) {
+            ps.setInt(1, projectId);
+            ps.executeUpdate();
+        }
+
+        String deleteWorkedHours = "DELETE wh FROM worked_hours wh JOIN task t ON wh.task_id = t.id JOIN work_package w ON t.wp_id = w.id WHERE w.project_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(deleteWorkedHours)) {
+            ps.setInt(1, projectId);
+            ps.executeUpdate();
+        }
+
+        String deleteTasks = "DELETE t FROM task t JOIN work_package w ON t.wp_id = w.id WHERE w.project_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(deleteTasks)) {
+            ps.setInt(1, projectId);
+            ps.executeUpdate();
+        }
+    }
+
     public List<Task> getTasksOfWP(int wp_id) throws SQLException {
         List<Task> tasks = new ArrayList<>();
         String query = "SELECT * FROM task WHERE wp_id=? ORDER BY order_number";
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setInt(1, wp_id);
-             try (ResultSet rs = ps.executeQuery();) {
-                 while (rs.next()) {
-                     tasks.add(createTaskBean(rs));
-                 }
-             }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    tasks.add(createTaskBean(rs));
+                }
+            }
         }
-
         return tasks;
     }
 
+    public Task getTaskById(int task_id) throws SQLException {
+        String query = "SELECT * FROM task WHERE id=?";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setInt(1, task_id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return createTaskBean(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean wpContainsTask(int wp_id, int task_id) throws SQLException {
+        String query = "SELECT * FROM task WHERE id=? AND wp_id=?";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setInt(1, task_id);
+            ps.setInt(2, wp_id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public int getNextOrderNumber(int wp_id) throws SQLException {
-        String query = "SELECT MAX(order_number) as order_number FROM task WHERE wp_id = ?";
+        String query = "SELECT MAX(order_number) as order_number FROM task WHERE wp_id=?";
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setInt(1, wp_id);
             try (ResultSet rs = ps.executeQuery()) {
-                if(rs.next()) {
+                if (rs.next()) {
                     return rs.getInt("order_number") + 1;
                 }
             }
@@ -61,72 +127,24 @@ public class TaskDAO {
         return 1;
     }
 
-    public boolean wpContainsTask(int wp_id, int task_id) throws SQLException {
-        String query = "SELECT * FROM task WHERE wp_id = ? AND id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setInt(1, wp_id);
-            ps.setInt(2, task_id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if(rs.next()) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    public Task getTaskById(int task_id) throws SQLException {
-        String query = "SELECT * FROM task WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setInt(1, task_id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if(rs.next()) {
-                    return createTaskBean(rs);
-                }
-            }
-        }
-
-        return null;
-    }
-
-    public boolean isAlreadyAssigned(int task_id, String username) throws SQLException {
-        String query = "SELECT 1 FROM task_assignee WHERE task_id = ? AND username = ?";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setInt(1, task_id);
-            ps.setString(2, username);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
-        }
-    }
-
-    public void createAssignment(int task_id, String username) throws SQLException {
-        String query = "INSERT INTO task_assignee(task_id, username) VALUES(?,?)";
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setInt(1, task_id);
-            ps.setString(2, username);
-            ps.executeUpdate();
-        }
-    }
-
     public Task createTaskBean(ResultSet rs) throws SQLException {
-        Map<Integer, Integer> plannedHours = new HashMap<>();
-        Map<Integer, Integer> workedHours = new HashMap<>();
-
         PlannedHoursDAO plannedHoursDAO = new PlannedHoursDAO(connection);
-        plannedHours = plannedHoursDAO.getPlannedHoursOfTask(rs.getInt("id"), rs.getInt("start_month"), rs.getInt("end_month"));
-
         WorkedHoursDAO workedHoursDAO = new WorkedHoursDAO(connection);
-        workedHours = workedHoursDAO.getWorkedHoursOfTask(rs.getInt("id"),  rs.getInt("start_month"), rs.getInt("end_month"));
+
+        int id = rs.getInt("id");
+        int startMonth = rs.getInt("start_month");
+        int endMonth = rs.getInt("end_month");
+
+        Map<Integer, Integer> plannedHours = plannedHoursDAO.getPlannedHoursOfTask(id, startMonth, endMonth);
+        Map<Integer, Integer> workedHours = workedHoursDAO.getWorkedHoursOfTask(id, startMonth, endMonth);
 
         return new Task(
-            rs.getInt("id"),
+                id,
                 rs.getInt("order_number"),
                 rs.getString("title"),
                 rs.getString("description"),
-                rs.getInt("start_month"),
-                rs.getInt("end_month"),
+                startMonth,
+                endMonth,
                 rs.getInt("wp_id"),
                 plannedHours,
                 workedHours

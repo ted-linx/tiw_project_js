@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +27,32 @@ public class WPDAO {
             ps.setInt(3, wpForm.start_month());
             ps.setInt(4, wpForm.end_month());
             ps.setInt(5, wpForm.project_id());
+            ps.executeUpdate();
+        }
+    }
+
+    public int createWPAndReturnId(int projectId, int orderNumber, String title, int startMonth, int endMonth) throws SQLException {
+        String query = "INSERT INTO work_package(order_number, title, start_month, end_month, project_id) VALUES (?,?,?,?,?)";
+        try (PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, orderNumber);
+            ps.setString(2, title);
+            ps.setInt(3, startMonth);
+            ps.setInt(4, endMonth);
+            ps.setInt(5, projectId);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        throw new SQLException("Unable to retrieve generated work package id");
+    }
+
+    public void deleteWPsByProject(int projectId) throws SQLException {
+        String query = "DELETE FROM work_package WHERE project_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setInt(1, projectId);
             ps.executeUpdate();
         }
     }

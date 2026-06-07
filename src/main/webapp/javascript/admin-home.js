@@ -11,15 +11,12 @@
   const projectNav = document.getElementById('project-nav');
   const detailPlaceholder = document.getElementById('detail-placeholder');
   const projectDetails = document.getElementById('project-details');
-  const tableContainer = document.getElementById('table-container');
-  const workspaceSubtitle = document.getElementById('workspace-subtitle');
-  const addWpBtn = document.getElementById('add-wp-btn');
-  const saveProjectBtn = document.getElementById('save-project-btn');
   const newProjectBtn = document.getElementById('new-project-btn');
 
   let createdProjects = [];
   let user = null;
   let currentProject = null;
+  let isDirty = false;
 
   function showSuccess(message) {
     if (!alertSuccess || !successMsg) return;
@@ -47,62 +44,100 @@
     if (successMsg) successMsg.textContent = '';
   }
 
-  function normalizeProject(project) {
-    const workPackages = Array.isArray(project?.workPackages) ? project.workPackages : [];
+  function markDirty() {
+    isDirty = true;
+  }
+
+  function clearDirty() {
+    isDirty = false;
+  }
+
+  function normalizeTask(task, taskIndex, wp) {
     return {
-      ...project,
-      workPackages: workPackages.map((wp, wpIndex) => ({
-        ...wp,
-        order_number: wp.order_number ?? wpIndex + 1,
-        tasks: Array.isArray(wp.tasks) ? wp.tasks.map((task, taskIndex) => ({
-          ...task,
-          order_number: task.order_number ?? taskIndex + 1,
-          description: task.description ?? '',
-          start_month: task.start_month ?? wp.start_month ?? 1,
-          end_month: task.end_month ?? wp.end_month ?? 1,
-          totalPlannedHours: task.totalPlannedHours ?? 0,
-          totalWorkedHours: task.totalWorkedHours ?? 0
-        })) : [],
-        title: wp.title ?? 'Untitled WP',
-        start_month: wp.start_month ?? 1,
-        end_month: wp.end_month ?? 1,
-        totalPlannedHours: wp.totalPlannedHours ?? 0,
-        totalWorkedHours: wp.totalWorkedHours ?? 0
-      }))
+      ...task,
+      order_number: task?.order_number ?? taskIndex + 1,
+      title: task?.title ?? 'Task title',
+      description: task?.description ?? '',
+      start_month: task?.start_month ?? wp?.start_month ?? 1,
+      end_month: task?.end_month ?? wp?.end_month ?? 1,
+      totalPlannedHours: task?.totalPlannedHours ?? task?.plannedHours ?? 0,
+      totalWorkedHours: task?.totalWorkedHours ?? task?.workedHours ?? 0,
+      planned_hours: task?.planned_hours ?? {},
+      worked_hours: task?.worked_hours ?? {}
     };
   }
 
+  function normalizeWorkPackage(wp, wpIndex) {
+    const normalized = {
+      ...wp,
+      order_number: wp?.order_number ?? wpIndex + 1,
+      title: wp?.title ?? 'Untitled WP',
+      start_month: wp?.start_month ?? 1,
+      end_month: wp?.end_month ?? 1,
+      totalPlannedHours: wp?.totalPlannedHours ?? wp?.plannedHours ?? 0,
+      totalWorkedHours: wp?.totalWorkedHours ?? wp?.workedHours ?? 0
+    };
+
+    normalized.tasks = Array.isArray(wp?.tasks)
+      ? wp.tasks.map((task, taskIndex) => normalizeTask(task, taskIndex, normalized))
+      : [];
+
+    return normalized;
+  }
+
+  function normalizeProject(project) {
+    const normalized = {
+      ...project,
+      id: project?.id ?? null,
+      title: project?.title ?? 'Untitled project',
+      duration: project?.duration ?? 12,
+      manager: project?.manager ?? user?.username ?? '',
+      status: project?.status ?? 'CREATED'
+    };
+
+    normalized.workPackages = Array.isArray(project?.workPackages)
+      ? project.workPackages.map((wp, wpIndex) => normalizeWorkPackage(wp, wpIndex))
+      : [];
+
+    return normalized;
+  }
+
   function buildEmptyProject() {
-    return {
+    return normalizeProject({
       id: null,
       title: 'New project',
       duration: 12,
       manager: user?.username || '',
       status: 'CREATED',
       workPackages: []
-    };
+    });
   }
 
   async function loadPage() {
     try {
       clearError();
       clearSuccess();
+
       const res = await fetch(`${ctx}/admin-home?action=data`, {
         headers: { Accept: 'application/json' }
       });
       const data = await res.json();
+
       if (!res.ok) {
         throw new Error(data.error || 'Unable to load administrator data.');
       }
 
       user = data.user || null;
-      createdProjects = Array.isArray(data.createdProjects) ? data.createdProjects.map(normalizeProject) : [];
+      createdProjects = Array.isArray(data.createdProjects)
+        ? data.createdProjects.map(normalizeProject)
+        : [];
       currentProject = null;
+      clearDirty();
 
       if (greeting && user) {
         const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
         greeting.innerHTML = fullName
-          ? `Welcome, <strong>${escapeHtml(fullName)}</strong>!`
+          ? `Welcome, <strong>${escapeHtml(fullName)}</strong>`
           : `Welcome, <strong>${escapeHtml(user.username || '')}</strong>!`;
       }
 
@@ -120,8 +155,9 @@
     projectNav.setAttribute('hidden', 'hidden');
     projectNav.innerHTML = '';
 
-    const drafts = currentProject && currentProject.id == null ? [currentProject] : [];
-    const allProjects = [...drafts, ...createdProjects];
+    const draftProjects = createdProjects.filter((project) => project.id == null);
+    const persistedProjects = createdProjects.filter((project) => project.id != null);
+    const allProjects = [...draftProjects, ...persistedProjects];
 
     if (!allProjects.length) return;
 
@@ -130,24 +166,31 @@
 
     allProjects.forEach((project) => {
       const li = document.createElement('li');
-      const isActive = currentProject === project || (currentProject && project.id != null && currentProject.id === project.id);
+      const isActive = currentProject && (
+        currentProject === project ||
+        (currentProject.id != null && project.id != null && currentProject.id === project.id) ||
+        (currentProject.id == null && project.id == null && currentProject.title === project.title)
+      );
+      const isDraft = project.id == null;
+
       li.innerHTML = `
-        <form method="get">
-          <input type="hidden" name="project_id" value="${project.id ?? ''}"/>
-          <button type="submit" class="project-nav-btn ${isActive ? 'active' : ''}">
-            <span class="project-nav-title">${escapeHtml(project.title ?? 'Untitled project')}</span>
-            <span class="project-nav-meta">
-              <span class="status-badge badge-${String(project.status || 'CREATED').toLowerCase()}">${escapeHtml(project.status || 'CREATED')}</span>
-              <span>${escapeHtml(String(project.duration ?? ''))} mo</span>
-            </span>
-          </button>
-        </form>
+        <button type="button" class="project-nav-btn ${isActive ? 'active' : ''}">
+          <span class="project-nav-title">${escapeHtml(project.title)}</span>
+          <span class="project-nav-meta">
+            <span class="status-badge badge-${String(project.status).toLowerCase()}">${escapeHtml(project.status)}</span>
+            <span>${escapeHtml(String(project.duration))} mo</span>
+            ${isDraft ? '<span>Draft</span>' : ''}
+          </span>
+        </button>
       `;
-      li.addEventListener('click', () => {
+
+      li.querySelector('button').addEventListener('click', () => {
         currentProject = normalizeProject(project);
+        clearDirty();
         renderProjectList();
         renderWorkspace();
       });
+
       projectNav.appendChild(li);
     });
   }
@@ -162,40 +205,37 @@
     projectDetails.setAttribute('hidden', 'hidden');
 
     if (!currentProject) {
-      if (workspaceSubtitle) {
-        workspaceSubtitle.textContent = 'Select a project from the list or create a new draft.';
-      }
-      if (tableContainer) {
-        tableContainer.innerHTML = '<div class="empty-state empty-state-inline"><p>No project selected yet.</p></div>';
-      }
       return;
     }
 
     detailPlaceholder.setAttribute('hidden', 'hidden');
     projectDetails.removeAttribute('hidden');
 
-    if (workspaceSubtitle) {
-      workspaceSubtitle.textContent = 'Click a value to edit it inline.';
-    }
-
     const workPackages = Array.isArray(currentProject.workPackages) ? currentProject.workPackages : [];
     const wpBlocks = workPackages.length === 0
-      ? [`<div class="empty-state empty-state-inline"><p>No work packages defined for this project yet.</p></div>`]
-      : workPackages.map((wp, wpIndex) => renderWorkPackage(wp, wpIndex));
+      ? `<div class="empty-state empty-state-inline"><p>No work packages defined for this project yet.</p></div>`
+      : workPackages.map((wp, wpIndex) => renderWorkPackage(wp, wpIndex)).join('');
 
     projectDetails.innerHTML = `
       <div class="detail-title-bar">
         <div>
-          <h2 id="project-title">${escapeHtml(currentProject.title ?? 'Untitled project')}</h2>
+          <h2>
+            <span class="inline-edit" data-entity="project" data-field="title">${escapeHtml(currentProject.title)}</span>
+          </h2>
           <div class="detail-meta">
-            <span class="status-badge badge-${String(currentProject.status || 'CREATED').toLowerCase()}">${escapeHtml(currentProject.status || 'CREATED')}</span>
-            <span>Duration: M1 – M<span>${escapeHtml(String(currentProject.duration ?? ''))}</span></span>
-            <span>PM: <span>${escapeHtml(currentProject.manager ?? '')}</span></span>
+            <span class="status-badge badge-${String(currentProject.status).toLowerCase()}">${escapeHtml(currentProject.status)}</span>
+            <span>Duration: M1 – M<span class="inline-edit" data-entity="project" data-field="duration">${escapeHtml(String(currentProject.duration))}</span></span>
+            <span>PM: <span class="inline-edit" data-entity="project" data-field="manager">${escapeHtml(currentProject.manager || '')}</span></span>
+            ${isDirty ? '<span>Unsaved changes</span>' : ''}
           </div>
         </div>
+        <div class="detail-actions">
+          <button type="button" class="action-chip action-chip--primary" data-action="add-wp">+ WP</button>
+          <button type="button" class="btn btn-primary" data-action="save-project">Save</button>
+        </div>
       </div>
-      <div id="table-container">
-        ${wpBlocks.join('')}
+      <div class="wp-list">
+        ${wpBlocks}
       </div>
     `;
 
@@ -204,57 +244,73 @@
 
   function renderWorkPackage(wp, wpIndex) {
     const tasks = Array.isArray(wp.tasks) ? wp.tasks : [];
-    const taskContent = tasks.length === 0
+    const taskMarkup = tasks.length === 0
       ? `<div class="task-empty">No tasks in this WP.</div>`
       : `
-        <table class="task-table">
-          <thead>
-            <tr>
-              <th scope="col">ID</th>
-              <th scope="col">Title</th>
-              <th scope="col">Description</th>
-              <th scope="col">Interval</th>
-              <th scope="col">Planned</th>
-              <th scope="col">Worked</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tasks.map((task, taskIndex) => `
+          <table class="task-table">
+            <thead>
               <tr>
-                <td class="task-id-cell"><span class="task-id">T${escapeHtml(String(wp.order_number ?? wpIndex + 1))}.${escapeHtml(String(task.order_number ?? taskIndex + 1))}</span></td>
-                <td class="task-title-cell">${escapeHtml(task.title ?? '')}</td>
-                <td class="task-desc-cell">${escapeHtml(task.description ?? '—')}</td>
-                <td class="task-interval-cell">M${escapeHtml(String(task.start_month ?? wp.start_month ?? '—'))} – M${escapeHtml(String(task.end_month ?? wp.end_month ?? '—'))}</td>
-                <td><span class="hours-pill planned">${escapeHtml(String(task.totalPlannedHours ?? 0))} h</span></td>
-                <td><span class="hours-pill worked">${escapeHtml(String(task.totalWorkedHours ?? 0))} h</span></td>
+                <th scope="col">ID</th>
+                <th scope="col">Title</th>
+                <th scope="col">Description</th>
+                <th scope="col">Interval</th>
+                <th scope="col">Planned</th>
+                <th scope="col">Worked</th>
+                <th scope="col">Actions</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
+            </thead>
+            <tbody>
+              ${tasks.map((task, taskIndex) => renderTask(task, taskIndex, wpIndex)).join('')}
+            </tbody>
+          </table>
+        `;
 
     return `
-      <div class="wp-list">
-        <div class="wp-card">
-          <div class="wp-header">
-            <div class="wp-header-left">
-              <span class="wp-badge">WP${escapeHtml(String(wp.order_number ?? wpIndex + 1))}</span>
-              <div>
-                <span class="wp-title">${escapeHtml(wp.title ?? 'Untitled WP')}</span>
-                <span class="wp-interval">M${escapeHtml(String(wp.start_month ?? '—'))} – M${escapeHtml(String(wp.end_month ?? '—'))}</span>
-              </div>
-            </div>
-            <div class="wp-hours-summary">
-              <span class="hours-label">Planned</span>
-              <span class="hours-value planned">${escapeHtml(String(wp.totalPlannedHours ?? 0))} h</span>
-              <span class="hours-sep">·</span>
-              <span class="hours-label">Worked</span>
-              <span class="hours-value worked">${escapeHtml(String(wp.totalWorkedHours ?? 0))} h</span>
+      <div class="wp-card">
+        <div class="wp-header">
+          <div class="wp-header-left">
+            <span class="wp-badge">WP${escapeHtml(String(wp.order_number))}</span>
+            <div>
+              <span class="wp-title inline-edit" data-entity="wp" data-field="title" data-wp-index="${wpIndex}">${escapeHtml(wp.title)}</span>
+              <span class="wp-interval">
+                M<span class="inline-edit" data-entity="wp" data-field="start_month" data-wp-index="${wpIndex}">${escapeHtml(String(wp.start_month))}</span>
+                –
+                M<span class="inline-edit" data-entity="wp" data-field="end_month" data-wp-index="${wpIndex}">${escapeHtml(String(wp.end_month))}</span>
+              </span>
             </div>
           </div>
-          ${taskContent}
+          <div class="wp-hours-summary">
+            <span class="hours-label">Planned</span>
+            <span class="hours-value planned">${escapeHtml(String(wp.totalPlannedHours))} h</span>
+            <span class="hours-sep">·</span>
+            <span class="hours-label">Worked</span>
+            <span class="hours-value worked">${escapeHtml(String(wp.totalWorkedHours))} h</span>
+          </div>
         </div>
+        <div class="wp-toolbar">
+          <button type="button" class="action-chip action-chip--primary" data-action="add-task" data-wp-index="${wpIndex}">+ Task</button>
+          <button type="button" class="action-chip action-chip--danger" data-action="delete-wp" data-wp-index="${wpIndex}">− WP</button>
+        </div>
+        ${taskMarkup}
       </div>
+    `;
+  }
+
+  function renderTask(task, taskIndex, wpIndex) {
+    return `
+      <tr>
+        <td class="task-id-cell"><span class="task-id">T${escapeHtml(String(wpIndex + 1))}.${escapeHtml(String(task.order_number))}</span></td>
+        <td class="task-title-cell"><span class="inline-edit" data-entity="task" data-field="title" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(task.title)}</span></td>
+        <td class="task-desc-cell"><span class="inline-edit" data-entity="task" data-field="description" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(task.description || '—')}</span></td>
+        <td class="task-interval-cell">
+          M<span class="inline-edit" data-entity="task" data-field="start_month" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(String(task.start_month))}</span>
+          –
+          M<span class="inline-edit" data-entity="task" data-field="end_month" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(String(task.end_month))}</span>
+        </td>
+        <td><span class="inline-edit hours-pill planned" data-entity="task" data-field="totalPlannedHours" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(String(task.totalPlannedHours))} h</span></td>
+        <td><span class="inline-edit hours-pill worked" data-entity="task" data-field="totalWorkedHours" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(String(task.totalWorkedHours))} h</span></td>
+        <td><button type="button" class="action-chip action-chip--primary" data-action="delete-task" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">− Task</button></td>
+      </tr>
     `;
   }
 
@@ -265,38 +321,27 @@
       el.addEventListener('click', () => makeEditable(el));
     });
 
-    projectDetails.querySelectorAll('[data-action="add-wp"]').forEach((btn) => {
-      btn.addEventListener('click', addWP);
-    });
+    projectDetails.querySelector('[data-action="add-wp"]')?.addEventListener('click', addWP);
+    projectDetails.querySelector('[data-action="save-project"]')?.addEventListener('click', saveCurrentProject);
 
     projectDetails.querySelectorAll('[data-action="add-task"]').forEach((btn) => {
       btn.addEventListener('click', () => addTask(Number(btn.dataset.wpIndex)));
     });
 
     projectDetails.querySelectorAll('[data-action="delete-wp"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        currentProject.workPackages.splice(Number(btn.dataset.wpIndex), 1);
-        renderProjectList();
-        renderWorkspace();
-      });
+      btn.addEventListener('click', () => deleteWP(Number(btn.dataset.wpIndex)));
     });
 
     projectDetails.querySelectorAll('[data-action="delete-task"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const wp = currentProject.workPackages[Number(btn.dataset.wpIndex)];
-        if (!wp || !Array.isArray(wp.tasks)) return;
-        wp.tasks.splice(Number(btn.dataset.taskIndex), 1);
-        renderProjectList();
-        renderWorkspace();
-      });
+      btn.addEventListener('click', () => deleteTask(Number(btn.dataset.wpIndex), Number(btn.dataset.taskIndex)));
     });
   }
 
   function makeEditable(el) {
-    const currentValue = el.textContent.trim();
+    const currentValue = el.textContent.replace(/\s+h$/, '').trim();
     const input = document.createElement('input');
     input.type = 'text';
-    input.value = currentValue;
+    input.value = currentValue === '—' ? '' : currentValue;
     input.className = 'inline-editor';
     el.replaceWith(input);
     input.focus();
@@ -321,6 +366,7 @@
 
     if (dataset.entity === 'project') {
       currentProject[field] = normalizeValue(field, value, currentProject[field]);
+      markDirty();
       return;
     }
 
@@ -329,18 +375,20 @@
 
     if (dataset.entity === 'wp') {
       wp[field] = normalizeValue(field, value, wp[field]);
+      markDirty();
       return;
     }
 
     const task = wp.tasks?.[Number(dataset.taskIndex)];
     if (!task) return;
     task[field] = normalizeValue(field, value, task[field]);
+    markDirty();
   }
 
   function normalizeValue(field, value, fallback) {
-    if (['duration', 'start_month', 'end_month'].includes(field)) {
+    if (['duration', 'start_month', 'end_month', 'totalPlannedHours', 'totalWorkedHours'].includes(field)) {
       const parsed = Number.parseInt(value, 10);
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
     }
     return value || fallback;
   }
@@ -351,8 +399,11 @@
       return;
     }
 
-    const workPackages = Array.isArray(currentProject.workPackages) ? currentProject.workPackages : (currentProject.workPackages = []);
-    workPackages.push({
+    const workPackages = Array.isArray(currentProject.workPackages)
+      ? currentProject.workPackages
+      : (currentProject.workPackages = []);
+
+    workPackages.push(normalizeWorkPackage({
       order_number: workPackages.length + 1,
       title: 'WP title',
       start_month: 1,
@@ -360,8 +411,18 @@
       totalPlannedHours: 0,
       totalWorkedHours: 0,
       tasks: []
-    });
+    }, workPackages.length));
 
+    markDirty();
+    renderProjectList();
+    renderWorkspace();
+  }
+
+  function deleteWP(wpIndex) {
+    if (!currentProject?.workPackages) return;
+    currentProject.workPackages.splice(wpIndex, 1);
+    currentProject.workPackages = currentProject.workPackages.map((wp, index) => normalizeWorkPackage({ ...wp, order_number: index + 1 }, index));
+    markDirty();
     renderProjectList();
     renderWorkspace();
   }
@@ -370,7 +431,8 @@
     const wp = currentProject?.workPackages?.[wpIndex];
     if (!wp) return;
     if (!Array.isArray(wp.tasks)) wp.tasks = [];
-    wp.tasks.push({
+
+    wp.tasks.push(normalizeTask({
       order_number: wp.tasks.length + 1,
       title: 'Task title',
       description: '',
@@ -380,19 +442,73 @@
       totalWorkedHours: 0,
       planned_hours: {},
       worked_hours: {}
-    });
+    }, wp.tasks.length, wp));
 
-    renderProjectList();
+    markDirty();
     renderWorkspace();
   }
 
-  function sumMap(map) {
-    if (!map || typeof map !== 'object') return 0;
-    return Object.values(map).reduce((sum, value) => sum + Number(value || 0), 0);
+  function deleteTask(wpIndex, taskIndex) {
+    const wp = currentProject?.workPackages?.[wpIndex];
+    if (!wp || !Array.isArray(wp.tasks)) return;
+    wp.tasks.splice(taskIndex, 1);
+    wp.tasks = wp.tasks.map((task, index) => normalizeTask({ ...task, order_number: index + 1 }, index, wp));
+    markDirty();
+    renderWorkspace();
   }
 
-  function sumTaskHours(tasks, key) {
-    return (tasks || []).reduce((sum, task) => sum + sumMap(task[key]), 0);
+  async function saveCurrentProject() {
+    if (!currentProject) {
+      showError('Select or create a project before saving.');
+      return;
+    }
+
+    try {
+      clearError();
+      clearSuccess();
+
+      const res = await fetch(`${ctx}/admin-home?action=save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify(currentProject)
+      });
+
+      const text = await res.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        showError('Server returned a non-JSON response while saving.');
+        return;
+      }
+
+      if (!res.ok) {
+        showError(data.error || 'Save failed.');
+        return;
+      }
+
+      if (currentProject.id == null && data.projectId != null) {
+        currentProject.id = data.projectId;
+      }
+
+      const existingIndex = createdProjects.findIndex((project) => project.id != null && project.id === currentProject.id);
+      if (existingIndex >= 0) {
+        createdProjects[existingIndex] = normalizeProject(currentProject);
+      } else {
+        createdProjects.unshift(normalizeProject(currentProject));
+      }
+
+      currentProject = normalizeProject(currentProject);
+      clearDirty();
+      renderProjectList();
+      renderWorkspace();
+      showSuccess(data.message || 'Project saved successfully.');
+    } catch {
+      showError('Save failed because the server response was not valid.');
+    }
   }
 
   function escapeHtml(value) {
@@ -407,50 +523,10 @@
   if (newProjectBtn) {
     newProjectBtn.addEventListener('click', () => {
       currentProject = buildEmptyProject();
+      createdProjects = [currentProject, ...createdProjects];
+      markDirty();
       renderProjectList();
       renderWorkspace();
-    });
-  }
-
-  if (addWpBtn) {
-    addWpBtn.addEventListener('click', addWP);
-  }
-
-  if (saveProjectBtn) {
-    saveProjectBtn.addEventListener('click', async () => {
-      if (!currentProject) {
-        showError('Select or create a project before saving.');
-        return;
-      }
-
-      try {
-        const res = await fetch(`${ctx}/admin-home?action=save`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json'
-          },
-          body: JSON.stringify(currentProject)
-        });
-
-        const text = await res.text();
-        let data = {};
-        try {
-          data = text ? JSON.parse(text) : {};
-        } catch {
-          showError('Server returned a non-JSON response while saving.');
-          return;
-        }
-
-        if (!res.ok) {
-          showError(data.error || 'Save failed.');
-          return;
-        }
-
-        showSuccess(data.message || 'Project saved successfully.');
-      } catch {
-        showError('Save failed because the server response was not valid.');
-      }
     });
   }
 
