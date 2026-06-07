@@ -1,0 +1,421 @@
+/* ════════════════════════════════════════════
+   verify.css  –  Verifica Progetti (pure HTML)
+   Dipende da style.css per i design token.
+   Nessun override di regole esistenti.
+════════════════════════════════════════════ */
+
+/* ── Layout: sidebar + contenuto ── */
+.verify-layout {
+    display: grid;
+    grid-template-columns: 272px 1fr;
+    gap: var(--space-6);
+    align-items: start;
+}
+@media (max-width: 768px) {
+    .verify-layout { grid-template-columns: 1fr; }
+}
+
+
+/* ── Pannello sinistro ── */
+.project-list-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    position: sticky;
+    top: calc(56px + var(--space-4));
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    background: var(--color-surface-offset);
+    border-bottom: 1px solid var(--color-divider);
+}
+.panel-header svg { color: var(--color-primary); }
+
+
+/* ── Lista navigazione progetti ── */
+.project-nav {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-2) 0;
+    max-height: 72vh;
+    overflow-y: auto;
+}
+.project-nav li { margin: 0; }
+.project-nav form { margin: 0; }
+
+.project-nav-btn {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: 100%;
+    text-align: left;
+    padding: var(--space-3) var(--space-4);
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+}
+.project-nav-btn:hover {
+    background: var(--color-surface-offset);
+}
+.project-nav-btn.active {
+    background: var(--color-primary-hl);
+    border-left-color: var(--color-primary);
+}
+
+.project-nav-title {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.project-nav-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+
+/* ── Badge stato ── */
+.status-badge {
+    display: inline-block;
+    padding: 1px var(--space-2);
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.badge-created   { background: #fef3c7; color: #92400e; }
+.badge-assigned  { background: #dbeafe; color: #1e40af; }
+.badge-concluded { background: #d1fae5; color: #065f46; }
+
+
+/* ── Pannello destro ── */
+.project-detail-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    min-height: 300px;
+    overflow: hidden;
+}
+
+
+/* ── Placeholder ── */
+.detail-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    padding: var(--space-16) var(--space-8);
+    color: var(--color-text-faint);
+    text-align: center;
+    font-size: var(--text-sm);
+}
+.detail-placeholder svg { opacity: 0.3; }
+
+
+/* ── Empty states ── */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-10);
+    color: var(--color-text-muted);
+    text-align: center;
+    font-size: var(--text-sm);
+}
+.empty-state svg { opacity: 0.35; }
+
+.empty-state-inline {
+    margin: var(--space-5) var(--space-6);
+    padding: var(--space-5);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+
+/* ── Barra titolo progetto ── */
+.detail-title-bar {
+    padding: var(--space-5) var(--space-6);
+    background: var(--color-surface-offset);
+    border-bottom: 1px solid var(--color-divider);
+}
+.detail-title-bar h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 400;
+    margin-bottom: var(--space-2);
+}
+.detail-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+
+/* ── Lista WP ── */
+.wp-list {
+    padding: var(--space-5) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.wp-card {
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+
+/* ── Header WP ── */
+.wp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface-offset);
+    border-bottom: 1px solid var(--color-divider);
+}
+.wp-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.wp-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: var(--space-1) var(--space-2);
+    background: var(--color-primary);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+}
+.wp-title {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+}
+.wp-interval {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-top: 1px;
+}
+.wp-hours-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+.wp-hours-summary .hours-label { color: var(--color-text-faint); }
+.wp-hours-summary .hours-sep   { color: var(--color-text-faint); }
+.wp-hours-summary .hours-value { font-weight: 600; }
+.wp-hours-summary .hours-value.planned { color: var(--color-primary); }
+.wp-hours-summary .hours-value.worked  { color: var(--color-success); }
+
+.task-empty {
+    padding: var(--space-4) var(--space-5);
+    font-size: var(--text-xs);
+    color: var(--color-text-faint);
+    font-style: italic;
+}
+
+
+/* ── Tabella task ── */
+.task-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+}
+
+.task-table thead tr {
+    background: var(--color-surface-offset);
+    border-bottom: 1px solid var(--color-divider);
+}
+.task-table th {
+    padding: var(--space-2) var(--space-4);
+    text-align: left;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.task-table tbody tr {
+    border-bottom: 1px solid var(--color-divider);
+    background: var(--color-surface-2);
+    transition: background var(--transition);
+}
+.task-table tbody tr:last-child { border-bottom: none; }
+.task-table tbody tr:hover      { background: var(--color-primary-hl); }
+
+.task-table td {
+    padding: var(--space-3) var(--space-4);
+    vertical-align: middle;
+    color: var(--color-text);
+}
+
+.task-id-cell       { width: 56px; }
+.task-interval-cell { white-space: nowrap; color: var(--color-text-muted); }
+.task-desc-cell     { color: var(--color-text-muted); font-size: var(--text-xs); }
+
+.task-id {
+    display: inline-block;
+    padding: 2px var(--space-2);
+    background: var(--color-primary-hl);
+    color: var(--color-primary);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    font-weight: 700;
+}
+
+
+/* ── Pillole ore ── */
+.hours-pill {
+    display: inline-block;
+    padding: 2px var(--space-2);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.hours-pill.planned { background: var(--color-primary-hl); color: var(--color-primary); }
+.hours-pill.worked  { background: #d1fae5;                 color: #065f46; }
+
+
+/* ── Link Home nell'header ── */
+.btn-icon-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+.btn-icon-link:hover {
+    background: var(--color-surface-offset);
+    border-color: var(--color-text-muted);
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+/* ── Monitor projects: month-by-month hours ── */
+.task-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.monitor-task-table {
+    width: 100%;
+    min-width: 700px;
+}
+
+.monitor-task-table .task-id-cell {
+    width: 96px;
+}
+
+.monitor-task-table .task-title-cell {
+    min-width: 220px;
+}
+
+.monitor-task-table .task-interval-cell {
+    white-space: nowrap;
+    width: 140px;
+}
+
+.task-month-breakdown {
+    min-width: 340px;
+}
+
+.month-compare-table {
+    display: grid;
+    grid-template-columns: 64px 88px 88px;
+    gap: var(--space-2) var(--space-2);
+    align-items: center;
+    justify-content: start;
+}
+
+.month-compare-head {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-bottom: 2px;
+}
+
+.month-cell-label,
+.month-cell-planned,
+.month-cell-worked {
+    padding: var(--space-2) var(--space-2);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+}
+
+.month-cell-label {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.month-cell-planned {
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, white);
+    font-weight: 600;
+}
+
+.month-cell-worked {
+    color: var(--color-success);
+    background: color-mix(in srgb, var(--color-success) 12%, white);
+    font-weight: 600;
+}
+
+.project-actions {
+    padding: 0 var(--space-6) var(--space-6);
+}
+

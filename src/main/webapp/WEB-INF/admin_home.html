@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+   Administrator Home – Project Management
+  </title>
+  <link rel="stylesheet" th:href="@{/css/style.css}"/>
+ </head>
+ <body>
+  <!-- ═══════════════════════════════════════════════     HEADER════════════════════════════════════════════════ -->
+  <header class="site-header">
+   <div class="header-inner">
+    <!-- Logo / brand -->
+    <a aria-label="Project Management – Home" class="logo" th:href="@{/admin_home}">
+     <svg aria-hidden="true" fill="none" height="26" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24" width="26">
+      <rect height="14" rx="2" width="20" x="2" y="3">
+      </rect>
+      <path d="M8 21h8M12 17v4">
+      </path>
+      <path d="M7 8h10M7 12h6">
+      </path>
+     </svg>
+     Project Management
+    </a>
+    <!-- User info + logout -->
+    <div class="header-user">
+     <span class="greeting">
+      Welcome,
+      <strong th:text="${user.firstName + ' ' + user.lastName}">
+       Mario Rossi
+      </strong>
+     </span>
+     <a class="btn-logout" th:href="@{/logout}">
+      <svg aria-hidden="true" fill="none" height="15" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="15">
+       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4">
+       </path>
+       <polyline points="16 17 21 12 16 7">
+       </polyline>
+       <line x1="21" x2="9" y1="12" y2="12">
+       </line>
+      </svg>
+      Logout
+     </a>
+    </div>
+   </div>
+  </header>
+  <!-- ═══════════════════════════════════════════════MAIN════════════════════════════════════════════════ -->
+  <main class="main-content">
+   <!-- Page heading -->
+   <div class="page-heading">
+    <p class="page-eyebrow">Admin area</p>
+    <h1>
+     Admin Home
+    </h1>
+    <p class="page-lead">
+     Create and manage projects, work packages and tasks from this control page.
+    </p>
+   </div>
+   <!-- ── Messaggi di feedback (Thymeleaf) ── -->
+   <div class="alert alert-success" role="status" th:if="${successMessage}">
+    <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14">
+     </path>
+     <polyline points="22 4 12 14.01 9 11.01">
+     </polyline>
+    </svg>
+    <span th:text="${successMessage}">
+     Operation completed successfully.
+    </span>
+   </div>
+   <div class="alert alert-error" role="alert" th:if="${errorMessage}">
+    <svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+     <circle cx="12" cy="12" r="10">
+     </circle>
+     <line x1="12" x2="12" y1="8" y2="12">
+     </line>
+     <line x1="12" x2="12.01" y1="16" y2="16">
+     </line>
+    </svg>
+    <span th:text="${errorMessage}">
+     An error occurred.
+    </span>
+   </div>
+   <!-- ═══════════════════════════════════════         FORM GRID: Progetto | WP | Task    ════════════════════════════════════════ -->
+   <div class="forms-grid">
+    <!-- ── CREA PROGETTO ── -->
+    <div class="form-card">
+     <div class="form-card-header">
+      <div aria-hidden="true" class="form-icon">
+       <svg fill="none" height="18" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="18">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+        </path>
+        <line x1="12" x2="12" y1="11" y2="17">
+        </line>
+        <line x1="9" x2="15" y1="14" y2="14">
+        </line>
+       </svg>
+      </div>
+      <div>
+       <h2>
+        Create Project
+       </h2>
+       <p>
+        Define a new project and assign the project manager.
+       </p>
+      </div>
+     </div>
+     <form method="post" th:action="@{/create-project}">
+      <div class="field">
+       <label for="project-title">
+        Project title
+       </label>
+       <input id="project-title" maxlength="255" name="title" placeholder="e.g. TIW platform development" required th:value="${projectForm != null ? projectForm.title : ''}" type="text"/>
+       <span class="field-error" th:if="${projectErrors != null and projectErrors.title != null}" th:text="${projectErrors.title}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="project-duration">
+        Duration (months)
+       </label>
+       <input id="project-duration" min="0" name="duration" placeholder="e.g. 24" required th:value="${projectForm != null ? projectForm.duration : ''}" type="number"/>
+       <span class="field-hint">
+        Determines the M1…MN interval of the project.
+       </span>
+       <span class="field-error" th:if="${projectErrors != null and projectErrors.duration != null}" th:text="${projectErrors.duration}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="project-manager">
+        Project manager (technical staff)
+       </label>
+       <div class="select-wrapper">
+        <select id="project-manager" name="manager" required>
+         <option disabled="" th:selected="${projectForm == null or projectForm.manager == null}" value="">
+          — Select a project manager —
+         </option>
+         <option th:each="u : ${technicalUsers}" th:selected="${projectForm != null and projectForm.manager == u.username}" th:text="${u.lastName + ' ' + u.firstName}" th:value="${u.username}">
+          Rossi Mario
+         </option>
+        </select>
+       </div>
+       <span class="field-error" th:if="${projectErrors != null and projectErrors.manager != null}" th:text="${projectErrors.manager}">
+       </span>
+      </div>
+      <button class="btn-primary" type="submit">
+       <svg aria-hidden="true" fill="none" height="15" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="15">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
+        </path>
+        <polyline points="17 21 17 13 7 13 7 21">
+        </polyline>
+        <polyline points="7 3 7 8 15 8">
+        </polyline>
+       </svg>
+       Save Project
+      </button>
+     </form>
+    </div>
+    <!-- ── CREA WP ── -->
+    <div class="form-card">
+     <div class="form-card-header">
+      <div aria-hidden="true" class="form-icon">
+       <svg fill="none" height="18" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="18">
+        <rect height="7" width="7" x="3" y="3">
+        </rect>
+        <rect height="7" width="7" x="14" y="3">
+        </rect>
+        <rect height="7" width="7" x="14" y="14">
+        </rect>
+        <rect height="7" width="7" x="3" y="14">
+        </rect>
+       </svg>
+      </div>
+      <div>
+       <h2>
+        Create Work Package
+       </h2>
+       <p>
+        Add a WP to a project in
+        <em>
+         Created
+        </em>
+        state.
+       </p>
+      </div>
+     </div>
+     <form method="post" th:action="@{/create-wp}">
+      <div class="field">
+       <label for="wp-project">
+        Project
+       </label>
+       <div class="select-wrapper">
+        <select id="wp-project" name="project_id" required>
+         <option disabled="" th:selected="${WPForm == null or WPForm.project_id == null}" value="">
+          — Select a project —
+         </option>
+         <option th:each="p : ${createdProjects}" th:selected="${WPForm != null and WPForm.project_id == p.id}" th:text="${p.title}" th:value="${p.id}">
+          Project X
+         </option>
+        </select>
+       </div>
+       <span class="field-error" th:if="${WPErrors != null and WPErrors.project_id != null}" th:text="${WPErrors.project_id}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="wp-title">
+        WP title
+       </label>
+       <input id="wp-title" maxlength="255" name="title" placeholder="e.g. Requirements analysis" required th:value="${WPForm != null ? WPForm.title : ''}" type="text"/>
+       <span class="field-error" th:if="${WPErrors != null and WPErrors.title != null}" th:text="${WPErrors.title}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="wp-start-month">
+        Start month
+       </label>
+       <input id="wp-start-month" min="1" name="start_month" placeholder="e.g. 1" required th:value="${WPForm != null ? WPForm.start_month : ''}" type="number"/>
+       <span class="field-error" th:if="${WPErrors != null and WPErrors.start_month != null}" th:text="${WPErrors.start_month}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="end-month-wp">
+        End month
+       </label>
+       <input id="end-month-wp" min="1" name="end_month" placeholder="e.g. 12" required th:value="${WPForm != null ? WPForm.end_month : ''}" type="number"/>
+       <span class="field-error" th:if="${WPErrors != null and WPErrors.end_month != null}" th:text="${WPErrors.end_month}">
+       </span>
+      </div>
+      <button class="btn-primary" type="submit">
+       <svg aria-hidden="true" fill="none" height="15" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="15">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
+        </path>
+        <polyline points="17 21 17 13 7 13 7 21">
+        </polyline>
+        <polyline points="7 3 7 8 15 8">
+        </polyline>
+       </svg>
+       Save WP
+      </button>
+     </form>
+    </div>
+    <!-- ── CREA TASK ── -->
+    <div class="form-card" id="create-task-card">
+     <div class="form-card-header">
+      <div aria-hidden="true" class="form-icon">
+       <svg fill="none" height="18" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="18">
+        <polyline points="9 11 12 14 22 4">
+        </polyline>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11">
+        </path>
+       </svg>
+      </div>
+      <div>
+       <h2>
+        Create Task
+       </h2>
+       <p>
+        Assign a task to a WP of a
+        <em>
+         Created
+        </em>
+        project.
+       </p>
+      </div>
+     </div>
+     <form method="post" th:action="@{/create-task}">
+      <div class="field">
+       <label for="task-project">
+        Project
+       </label>
+       <div class="select-btn-wrapper">
+        <div class="select-wrapper">
+         <select id="task-project" name="project_id" required="">
+          <option disabled="" th:selected="${taskForm == null or taskForm.project_id == null}" value="">
+           — Select a project —
+          </option>
+          <option th:each="p : ${createdProjects}"
+                  th:selected="${taskForm != null and taskForm.project_id == p.id}"
+                  th:text="${p.title}"
+                  th:value="${p.id}">
+           Project X
+          </option>
+         </select>
+        </div>
+        <button type="submit" name="loadWPs" value="true" class="btn-load-wp" formnovalidate>
+         Load WPs
+        </button>
+       </div>
+       <span class="field-error" th:if="${taskErrors != null and taskErrors.project_id != null}" th:text="${taskErrors.project_id}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="task-wp">
+        Work Package
+       </label>
+       <div class="select-wrapper">
+        <select id="task-wp" name="wp_id" required="">
+         <option disabled="" th:selected="${projectWPs == null and (taskForm == null or taskForm.wp_id == null)}" value="" th:if="${projectWPs == null}">
+          — Select a project first —
+         </option>
+         <option disabled="" th:selected="${projectWPs != null and (taskForm == null or taskForm.wp_id == null)}" value="" th:if="${projectWPs != null}">
+          — Select a work package —
+         </option>
+         <option th:each="wp : ${projectWPs}" th:selected="${taskForm != null and taskForm.wp_id == wp.id}" th:text="'WP' + ${wp.order_number} + ' – ' + ${wp.title}" th:value="${wp.id}">
+          WP1 – Analisi
+         </option>
+        </select>
+       </div>
+       <span class="field-error" th:if="${taskErrors != null and taskErrors.wp_id != null}" th:text="${taskErrors.wp_id}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="task-title">
+        Task title
+       </label>
+       <input id="task-title" maxlength="255" name="title" placeholder="e.g. Gather functional requirements" required="" th:value="${taskForm != null ? taskForm.title : ''}" type="text"/>
+       <span class="field-error" th:if="${taskErrors != null and taskErrors.title != null}" th:text="${taskErrors.title}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="task-description">
+        Description
+       </label>
+       <input id="task-description" maxlength="1000" name="description" placeholder="Brief task description" th:value="${taskForm != null ? taskForm.description : ''}" type="text"/>
+      </div>
+      <div class="field">
+       <label for="task-start-month">
+        Start month
+       </label>
+       <input id="task-start-month" min="1" name="start_month" placeholder="e.g. 2" required="" th:value="${taskForm != null ? taskForm.start_month : ''}" type="number"/>
+       <span class="field-error" th:if="${taskErrors != null and taskErrors.start_month != null}" th:text="${taskErrors.start_month}">
+       </span>
+      </div>
+      <div class="field">
+       <label for="task-end-month">
+        End month
+       </label>
+       <input id="task-end-month" min="1" name="end_month" placeholder="e.g. 8" required="" th:value="${taskForm != null ? taskForm.end_month : ''}" type="number"/>
+       <span class="field-error" th:if="${taskErrors != null and taskErrors.end_month != null}" th:text="${taskErrors.end_month}">
+       </span>
+      </div>
+      <button class="btn-primary" type="submit">
+       <svg aria-hidden="true" fill="none" height="15" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="15">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
+        </path>
+        <polyline points="17 21 17 13 7 13 7 21">
+        </polyline>
+        <polyline points="7 3 7 8 15 8">
+        </polyline>
+       </svg>
+       Save Task
+      </button>
+     </form>
+    </div>
+   </div>
+   <!-- /forms-grid -->
+   <!-- ── Link a Verifica Progetti ── -->
+   <hr class="section-divider"/>
+   <div class="forms-grid">
+    <div class="form-card">
+     <div class="form-card-header">
+      <div class="form-icon" aria-hidden="true">
+       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12h14M12 5v14"
+              stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+       </svg>
+      </div>
+      <div>
+       <h2>Project actions</h2>
+       <p>Reach the pages dedicated to project verification.</p>
+      </div>
+     </div>
+     <div class="action-links">
+      <a class="action-link-card" th:href="@{/verify-projects}">
+       <span class="action-link-title">Go to Project Verification</span>
+       <span class="action-link-copy">Inspect created projects' planned and worked hours</span>
+       <svg aria-hidden="true" fill="none" height="14" stroke="currentColor" stroke-width="2" style="margin-left:auto" viewbox="0 0 24 24" width="14">
+        <polyline points="9 18 15 12 9 6">
+        </polyline>
+       </svg>
+      </a>
+     </div>
+    </div>
+   </div>
+  </main>
+ </body>
+</html>
+ 
