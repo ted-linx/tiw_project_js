@@ -1,3 +1,4 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +7,11 @@
   <title>Login – Project Management</title>
 
   <link rel="stylesheet"/>
-  <script src="../javascript/login.js" defer></script>
+  <script>
+    window.APP_CONTEXT = '${pageContext.request.contextPath}';
+  </script>
+  <script src="${pageContext.request.contextPath}/javascript/login.js" defer></script>
+
   <style>
     /* ══════════════════════════════════════════
        DESIGN TOKENS  (identici ad admin_home)
@@ -145,6 +150,9 @@
       border-radius: var(--radius-md);
       font-size: var(--text-sm);
       margin-bottom: var(--space-5);
+    }
+    .alert-error[hidden] {
+      display: none;
     }
     .alert-error svg { flex-shrink: 0; margin-top: 2px; }
 

@@ -23,12 +23,12 @@ public class Login extends HttpServlet {
     }
 
     /**
-     * GET /login → inoltra internamente a WEB-INF/login.html
+     * GET /login → inoltra internamente a WEB-INF/login.jsp
      * mantenendo /login come URL visibile nel browser.
      */
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        RequestDispatcher dispatcher = req.getRequestDispatcher("/WEB-INF/login.html");
+        RequestDispatcher dispatcher = req.getRequestDispatcher("/WEB-INF/login.jsp");
         dispatcher.forward(req, resp);
     }
 
