@@ -41,8 +41,9 @@
 
 <main class="main-content" id="main">
   <div class="page-heading">
-    <h1>Project Verification</h1>
-    <p>Create, inspect and refine project structure before saving it to the database.</p>
+    <p class="page-eyebrow">Admin area</p>
+    <h1>Admin Home</h1>
+    <p class="page-lead">Create, inspect and refine project structure before saving it to the database.</p>
   </div>
 
   <div class="alert alert-success" id="alert-success" role="status" hidden="hidden">

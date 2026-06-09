@@ -51,6 +51,7 @@ public class AdminHome extends HttpServlet {
                 UserDAO userDAO = new UserDAO(connection);
 
                 List<Project> createdProjects = projectDAO.getProjectByStatusAndCreator(Project.Status.CREATED, user.getUsername());
+                List<User> technicalUsers = userDAO.getStaffByRole(User.Role.TECHNICAL);
 
                 JsonObject userJson = new JsonObject();
                 userJson.addProperty("username", user.getUsername());
@@ -63,6 +64,7 @@ public class AdminHome extends HttpServlet {
 
                 JsonObject result = new JsonObject();
                 result.add("user", userJson);
+                result.add("technicalUsers", gson.toJsonTree(technicalUsers));
                 result.add("createdProjects", gson.toJsonTree(createdProjects));
 
                 writeJson(resp, HttpServletResponse.SC_OK, result);

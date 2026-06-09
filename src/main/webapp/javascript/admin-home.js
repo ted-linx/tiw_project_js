@@ -14,8 +14,10 @@
   const newProjectBtn = document.getElementById('new-project-btn');
 
   let createdProjects = [];
+  let technicalUsers = [];
   let user = null;
   let currentProject = null;
+  let originalProjectSnapshot = null;
   let isDirty = false;
 
   function showSuccess(message) {
@@ -50,6 +52,24 @@
 
   function clearDirty() {
     isDirty = false;
+  }
+
+  function cloneProject(project) {
+    return project ? JSON.parse(JSON.stringify(project)) : null;
+  }
+
+  function setCleanSnapshot(project) {
+    originalProjectSnapshot = cloneProject(project);
+    clearDirty();
+  }
+
+  function refreshDirtyState() {
+    if (!currentProject || !originalProjectSnapshot) {
+      clearDirty();
+      return;
+    }
+
+    isDirty = JSON.stringify(currentProject) !== JSON.stringify(originalProjectSnapshot);
   }
 
   function normalizeTask(task, taskIndex, wp) {
@@ -128,10 +148,12 @@
       }
 
       user = data.user || null;
+      technicalUsers = Array.isArray(data.technicalUsers) ? data.technicalUsers : [];
       createdProjects = Array.isArray(data.createdProjects)
         ? data.createdProjects.map(normalizeProject)
         : [];
       currentProject = null;
+      originalProjectSnapshot = null;
       clearDirty();
 
       if (greeting && user) {
@@ -186,7 +208,7 @@
 
       li.querySelector('button').addEventListener('click', () => {
         currentProject = normalizeProject(project);
-        clearDirty();
+        setCleanSnapshot(currentProject);
         renderProjectList();
         renderWorkspace();
       });
@@ -225,13 +247,15 @@
           <div class="detail-meta">
             <span class="status-badge badge-${String(currentProject.status).toLowerCase()}">${escapeHtml(currentProject.status)}</span>
             <span>Duration: M1 – M<span class="inline-edit" data-entity="project" data-field="duration">${escapeHtml(String(currentProject.duration))}</span></span>
-            <span>PM: <span class="inline-edit" data-entity="project" data-field="manager">${escapeHtml(currentProject.manager || '')}</span></span>
+            <span class="meta-pm">PM: <select class="inline-select" data-entity="project" data-field="manager">
+              ${technicalUsers.map(u => `<option value="${escapeHtml(u.username)}" ${u.username === currentProject.manager ? 'selected' : ''}>${escapeHtml(u.lastName + ' ' + u.firstName)}</option>`).join('')}
+            </select></span>
             ${isDirty ? '<span>Unsaved changes</span>' : ''}
           </div>
         </div>
         <div class="detail-actions">
           <button type="button" class="action-chip action-chip--primary" data-action="add-wp">+ WP</button>
-          <button type="button" class="btn btn-primary" data-action="save-project">Save</button>
+          ${isDirty ? '<button type="button" class="btn btn-primary" data-action="save-project">Save</button>' : ''}
         </div>
       </div>
       <div class="wp-list">
@@ -307,8 +331,8 @@
           –
           M<span class="inline-edit" data-entity="task" data-field="end_month" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(String(task.end_month))}</span>
         </td>
-        <td><span class="inline-edit hours-pill planned" data-entity="task" data-field="totalPlannedHours" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(String(task.totalPlannedHours))} h</span></td>
-        <td><span class="inline-edit hours-pill worked" data-entity="task" data-field="totalWorkedHours" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">${escapeHtml(String(task.totalWorkedHours))} h</span></td>
+        <td><span class="hours-pill planned">${escapeHtml(String(task.totalPlannedHours))} h</span></td>
+        <td><span class="hours-pill worked">${escapeHtml(String(task.totalWorkedHours))} h</span></td>
         <td><button type="button" class="action-chip action-chip--primary" data-action="delete-task" data-wp-index="${wpIndex}" data-task-index="${taskIndex}">− Task</button></td>
       </tr>
     `;
@@ -319,6 +343,15 @@
 
     projectDetails.querySelectorAll('.inline-edit').forEach((el) => {
       el.addEventListener('click', () => makeEditable(el));
+    });
+
+    projectDetails.querySelectorAll('.inline-select').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        applyValue(sel.dataset, sel.value);
+        refreshDirtyState();
+        renderProjectList();
+        renderWorkspace();
+      });
     });
 
     projectDetails.querySelector('[data-action="add-wp"]')?.addEventListener('click', addWP);
@@ -349,6 +382,7 @@
 
     const commit = () => {
       applyValue(el.dataset, input.value.trim());
+      refreshDirtyState();
       renderProjectList();
       renderWorkspace();
     };
@@ -366,7 +400,7 @@
 
     if (dataset.entity === 'project') {
       currentProject[field] = normalizeValue(field, value, currentProject[field]);
-      markDirty();
+      refreshDirtyState();
       return;
     }
 
@@ -375,14 +409,14 @@
 
     if (dataset.entity === 'wp') {
       wp[field] = normalizeValue(field, value, wp[field]);
-      markDirty();
+      refreshDirtyState();
       return;
     }
 
     const task = wp.tasks?.[Number(dataset.taskIndex)];
     if (!task) return;
     task[field] = normalizeValue(field, value, task[field]);
-    markDirty();
+    refreshDirtyState();
   }
 
   function normalizeValue(field, value, fallback) {
@@ -414,6 +448,7 @@
     }, workPackages.length));
 
     markDirty();
+    refreshDirtyState();
     renderProjectList();
     renderWorkspace();
   }
@@ -422,7 +457,7 @@
     if (!currentProject?.workPackages) return;
     currentProject.workPackages.splice(wpIndex, 1);
     currentProject.workPackages = currentProject.workPackages.map((wp, index) => normalizeWorkPackage({ ...wp, order_number: index + 1 }, index));
-    markDirty();
+    refreshDirtyState();
     renderProjectList();
     renderWorkspace();
   }
@@ -445,6 +480,7 @@
     }, wp.tasks.length, wp));
 
     markDirty();
+    refreshDirtyState();
     renderWorkspace();
   }
 
@@ -453,7 +489,7 @@
     if (!wp || !Array.isArray(wp.tasks)) return;
     wp.tasks.splice(taskIndex, 1);
     wp.tasks = wp.tasks.map((task, index) => normalizeTask({ ...task, order_number: index + 1 }, index, wp));
-    markDirty();
+    refreshDirtyState();
     renderWorkspace();
   }
 
@@ -502,7 +538,7 @@
       }
 
       currentProject = normalizeProject(currentProject);
-      clearDirty();
+      setCleanSnapshot(currentProject);
       renderProjectList();
       renderWorkspace();
       showSuccess(data.message || 'Project saved successfully.');
