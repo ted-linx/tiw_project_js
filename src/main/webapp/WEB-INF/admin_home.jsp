@@ -7,8 +7,9 @@
   <title>Project Verification – Project Management</title>
   <script>
     window.APP_CONTEXT = '${pageContext.request.contextPath}'
+    window.APP_USER = { fullName: '${user.fullName}'}
   </script>
-  <script src="${pageContext.request.contextPath}/javascript/admin-home.js" defer></script>
+  <script src="${pageContext.request.contextPath}/javascript/admin_home.js" defer></script>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css"/>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/verify.css"/>
 </head>

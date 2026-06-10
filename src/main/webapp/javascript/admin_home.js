@@ -20,6 +20,10 @@
   let originalProjectSnapshot = null;
   let isDirty = false;
 
+  if (greeting && window.APP_USER?.fullName) {
+    greeting.innerHTML = `Hello, <strong>${window.APP_USER.fullName}</strong>`;
+  }
+
   function showSuccess(message) {
     if (!alertSuccess || !successMsg) return;
     successMsg.textContent = message;
@@ -155,13 +159,6 @@
       currentProject = null;
       originalProjectSnapshot = null;
       clearDirty();
-
-      if (greeting && user) {
-        const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
-        greeting.innerHTML = fullName
-          ? `Welcome, <strong>${escapeHtml(fullName)}</strong>`
-          : `Welcome, <strong>${escapeHtml(user.username || '')}</strong>!`;
-      }
 
       renderProjectList();
       renderWorkspace();
