@@ -9,7 +9,7 @@
     window.APP_CONTEXT = '${pageContext.request.contextPath}'
     window.APP_USER = { fullName: '${user.fullName}'}
   </script>
-  <script src="${pageContext.request.contextPath}/javascript/prova.js" defer></script>
+  <script src="${pageContext.request.contextPath}/javascript/manager_home.js" defer></script>
   <script src="${pageContext.request.contextPath}/javascript/manager_project_monitoring.js" defer></script>
   <script src="${pageContext.request.contextPath}/javascript/manager_collaborator_monitoring.js" defer></script>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css"/>

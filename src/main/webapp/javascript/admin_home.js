@@ -32,12 +32,9 @@
 
   function showError(message) {
     if (errorMsg) errorMsg.textContent = message;
-    if (alertError) {
-      alertError.removeAttribute('hidden');
-      alertError.focus?.();
-      return;
-    }
-    console.error(message);
+    if (alertError) alertError.hidden = false;
+    if (alertSuccess) alertSuccess.hidden = true;
+    alertError.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function clearError() {

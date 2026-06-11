@@ -153,7 +153,7 @@
 
                 const projectInList = state.projects.find(p => String(p.id) === String(project.id));
                 if (projectInList) {
-                    projectInList.status = 'COMPLETED';
+                    projectInList.status = 'CONCLUDED';
                 }
                 await selectProject(project.id);
             });
