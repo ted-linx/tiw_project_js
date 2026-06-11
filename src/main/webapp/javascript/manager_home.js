@@ -387,6 +387,7 @@
         if (successMsg) successMsg.textContent = message;
         if (alertSuccess) alertSuccess.hidden = false;
         if (alertError) alertError.hidden = true;
+        alertSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function showError(message) {

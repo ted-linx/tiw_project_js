@@ -28,6 +28,7 @@
     if (!alertSuccess || !successMsg) return;
     successMsg.textContent = message;
     alertSuccess.removeAttribute('hidden');
+    alertSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function showError(message) {
@@ -232,6 +233,8 @@
       ? `<div class="empty-state empty-state-inline"><p>No work packages defined for this project yet.</p></div>`
       : workPackages.map((wp, wpIndex) => renderWorkPackage(wp, wpIndex)).join('');
 
+    const isNewProject = !currentProject.id;
+
     projectDetails.innerHTML = `
       <div class="detail-title-bar">
         <div>
@@ -244,12 +247,12 @@
             <span class="meta-pm">PM: <select class="inline-select" data-entity="project" data-field="manager">
               ${technicalUsers.map(u => `<option value="${escapeHtml(u.username)}" ${u.username === currentProject.manager ? 'selected' : ''}>${escapeHtml(u.lastName + ' ' + u.firstName)}</option>`).join('')}
             </select></span>
-            ${isDirty ? '<span>Unsaved changes</span>' : ''}
+            ${(isNewProject || isDirty) ? '<span>Unsaved changes</span>' : ''}
           </div>
         </div>
         <div class="detail-actions">
           <button type="button" class="action-chip action-chip--primary" data-action="add-wp">+ WP</button>
-          ${isDirty ? '<button type="button" class="btn btn-primary" data-action="save-project">Save</button>' : ''}
+          ${(isNewProject || isDirty) ? '<button type="button" class="btn btn-primary" data-action="save-project">Save</button>' : ''}
         </div>
       </div>
       <div class="wp-list">
