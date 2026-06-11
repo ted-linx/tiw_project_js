@@ -48,7 +48,7 @@
             button.type = 'button';
             button.className = 'project-nav-btn' + (collaborator.username === state.selectedUsername ? ' active' : '');
             button.innerHTML = `
-                <span class="project-nav-title">${escapeHtml(collaborator.fullName || collaborator.username)}</span>
+                <span class="project-nav-title">${escapeHtml(collaborator.fullName)}</span>
                 <span class="project-nav-meta">${escapeHtml(collaborator.username)}</span>
             `;
             button.addEventListener('click', () => selectCollaborator(collaborator.username));

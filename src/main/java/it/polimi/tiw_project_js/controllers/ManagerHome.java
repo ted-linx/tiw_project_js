@@ -278,8 +278,18 @@ public class ManagerHome extends HttpServlet {
             connection = ConnectionHandler.getConnection(getServletContext());
             UserDAO userDAO = new UserDAO(connection);
 
+            List<Map<String, Object>> collaboratorRows = new ArrayList<>();
+            for (User collaborator : userDAO.getCollaboratorsByManager(user.getUsername())) {
+                Map<String, Object> collaboratorMap = new LinkedHashMap<>();
+                collaboratorMap.put("username", collaborator.getUsername());
+                collaboratorMap.put("firstName", collaborator.getFirstName());
+                collaboratorMap.put("lastName", collaborator.getLastName());
+                collaboratorMap.put("fullName", collaborator.getFullName());
+                collaboratorRows.add(collaboratorMap);
+            }
+
             JsonObject result = new JsonObject();
-            result.add("collaborators", gson.toJsonTree(userDAO.getCollaboratorsByManager(user.getUsername())));
+            result.add("collaborators", gson.toJsonTree(collaboratorRows));
             writeJson(resp, HttpServletResponse.SC_OK, result);
         } catch (SQLException e) {
             sendJsonError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Database error: " + e.getMessage());
@@ -300,26 +310,37 @@ public class ManagerHome extends HttpServlet {
             connection = ConnectionHandler.getConnection(getServletContext());
             ProjectDAO projectDAO = new ProjectDAO(connection);
             UserDAO userDAO = new UserDAO(connection);
+            TaskAssigneeDAO taskAssigneeDAO = new TaskAssigneeDAO(connection);
             WorkedHoursDAO workedHoursDAO = new WorkedHoursDAO(connection);
 
             List<User> collaborators = userDAO.getCollaboratorsByManager(user.getUsername());
-            boolean allowed = collaborators.stream().anyMatch(c -> c.getUsername().equals(collaboratorParam));
-            if (!allowed) {
+            User selectedCollaborator = collaborators.stream()
+                    .filter(c -> c.getUsername().equals(collaboratorParam))
+                    .findFirst()
+                    .orElse(null);
+            if (selectedCollaborator == null) {
                 sendJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "You are not allowed to inspect this collaborator");
                 return;
             }
 
+            List<Project> assignedProjects = taskAssigneeDAO.getAssignedProjectsOfCollaborator(collaboratorParam);
             List<Map<String, Object>> projectRows = new ArrayList<>();
-            for (Project project : projectDAO.getProjectsByManager(user.getUsername())) {
+
+            for (Project assignedProject : assignedProjects) {
+                if (!projectDAO.userIsProjectManager(user.getUsername(), assignedProject.getId())) {
+                    continue;
+                }
+
+                Map<Integer, List<Task>> tasksByWp = taskAssigneeDAO.getAssignedTasksByWpInProject(collaboratorParam, assignedProject.getId());
+                List<WP> assignedWps = taskAssigneeDAO.getAssignedWPsOfCollaboratorInProject(collaboratorParam, assignedProject.getId());
                 List<Map<String, Object>> wpRows = new ArrayList<>();
-                boolean hasAnyWorkedHours = false;
 
-                for (WP wp : project.getWorkPackages()) {
+                for (WP wp : assignedWps) {
+                    List<Task> assignedTasks = tasksByWp.getOrDefault(wp.getId(), List.of());
                     List<Map<String, Object>> taskRows = new ArrayList<>();
-                    Map<Integer, Integer> wpWorked = zeroMap(project.getDuration());
-                    boolean wpHasWorkedHours = false;
+                    Map<Integer, Integer> wpWorked = zeroMap(assignedProject.getDuration());
 
-                    for (Task task : wp.getTasks()) {
+                    for (Task task : assignedTasks) {
                         Map<Integer, Integer> worked = workedHoursDAO.getWorkedHoursOfTaskForCollaborator(
                                 task.getId(),
                                 collaboratorParam,
@@ -327,47 +348,44 @@ public class ManagerHome extends HttpServlet {
                                 task.getEnd_month()
                         );
 
-                        int taskTotal = worked.values().stream().mapToInt(Integer::intValue).sum();
-                        if (taskTotal > 0) {
-                            wpHasWorkedHours = true;
-                            hasAnyWorkedHours = true;
-                        }
-
                         addInto(wpWorked, worked);
 
                         Map<String, Object> taskMap = new LinkedHashMap<>();
                         taskMap.put("id", task.getId());
                         taskMap.put("order_number", task.getOrder_number());
                         taskMap.put("title", task.getTitle());
+                        taskMap.put("description", task.getDescription());
+                        taskMap.put("start_month", task.getStart_month());
+                        taskMap.put("end_month", task.getEnd_month());
                         taskMap.put("worked_hours", worked);
                         taskRows.add(taskMap);
                     }
 
-                    if (wpHasWorkedHours) {
-                        Map<String, Object> wpMap = new LinkedHashMap<>();
-                        wpMap.put("id", wp.getId());
-                        wpMap.put("order_number", wp.getOrder_number());
-                        wpMap.put("title", wp.getTitle());
-                        wpMap.put("workedHours", wpWorked);
-                        wpMap.put("tasks", taskRows);
-                        wpRows.add(wpMap);
-                    }
+                    Map<String, Object> wpMap = new LinkedHashMap<>();
+                    wpMap.put("id", wp.getId());
+                    wpMap.put("order_number", wp.getOrder_number());
+                    wpMap.put("title", wp.getTitle());
+                    wpMap.put("start_month", wp.getStart_month());
+                    wpMap.put("end_month", wp.getEnd_month());
+                    wpMap.put("workedHours", wpWorked);
+                    wpMap.put("tasks", taskRows);
+                    wpRows.add(wpMap);
                 }
 
-                if (hasAnyWorkedHours) {
-                    Map<String, Object> projectMap = new LinkedHashMap<>();
-                    projectMap.put("id", project.getId());
-                    projectMap.put("title", project.getTitle());
-                    projectMap.put("duration", project.getDuration());
-                    projectMap.put("status", project.getStatus());
-                    projectMap.put("months", buildMonths(project.getDuration()));
-                    projectMap.put("wps", wpRows);
-                    projectRows.add(projectMap);
-                }
+                Map<String, Object> projectMap = new LinkedHashMap<>();
+                projectMap.put("id", assignedProject.getId());
+                projectMap.put("title", assignedProject.getTitle());
+                projectMap.put("duration", assignedProject.getDuration());
+                projectMap.put("status", assignedProject.getStatus());
+                projectMap.put("months", buildMonths(assignedProject.getDuration()));
+                projectMap.put("wps", wpRows);
+                projectRows.add(projectMap);
             }
 
             JsonObject result = new JsonObject();
-            result.addProperty("username", collaboratorParam);
+            result.addProperty("username", selectedCollaborator.getUsername());
+            result.addProperty("fullName", selectedCollaborator.getFullName());
+            result.add("selectedCollaborator", gson.toJsonTree(selectedCollaborator));
             result.add("projects", gson.toJsonTree(projectRows));
             writeJson(resp, HttpServletResponse.SC_OK, result);
         } catch (SQLException e) {
