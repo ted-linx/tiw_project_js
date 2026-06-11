@@ -431,3 +431,87 @@
     color: var(--color-text-muted);
     font-size: var(--text-sm);
 }
+
+
+.task-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.monitor-task-table {
+    width: 100%;
+    min-width: 700px;
+}
+
+.monitor-task-table .task-id-cell {
+    width: 96px;
+}
+
+.monitor-task-table .task-title-cell {
+    min-width: 220px;
+}
+
+.task-desc-cell {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+}
+
+.monitor-task-table .task-interval-cell {
+    white-space: nowrap;
+    width: 140px;
+}
+
+.task-month-breakdown {
+    min-width: 340px;
+}
+
+.month-compare-table {
+    display: grid;
+    grid-template-columns: 64px 88px 88px;
+    gap: var(--space-2) var(--space-2);
+    align-items: center;
+    justify-content: start;
+}
+
+.month-compare-head {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-bottom: 2px;
+}
+
+.month-cell-label,
+.month-cell-planned,
+.month-cell-worked {
+    padding: var(--space-2) var(--space-2);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+}
+
+.month-cell-label {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.month-cell-planned {
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, white);
+    font-weight: 600;
+}
+
+.month-cell-worked {
+    color: var(--color-success);
+    background: color-mix(in srgb, var(--color-success) 12%, white);
+    font-weight: 600;
+}
+
+.project-actions {
+    padding: 0 var(--space-6) var(--space-6);
+}
+

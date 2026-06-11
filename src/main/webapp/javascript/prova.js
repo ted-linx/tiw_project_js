@@ -22,13 +22,17 @@
     const assignProjectId = document.getElementById('assign-project-id');
     const assignProjectForm = document.getElementById('assign-project-form');
 
+    const viewButtons = Array.from(document.querySelectorAll('[data-view-target]'));
+    const views = Array.from(document.querySelectorAll('[data-view]'));
+
     const state = {
         assignedProjects: [],
         projectWPs: [],
         wpTasks: [],
         collaborators: [],
         selectedProject: null,
-        selectedTask: null
+        selectedTask: null,
+        currentView: 'assignment'
     };
 
     document.addEventListener('DOMContentLoaded', init);
@@ -43,6 +47,7 @@
         }
 
         bindEvents();
+        switchView(state.currentView);
         loadInitialData();
     }
 
@@ -52,6 +57,25 @@
         taskSelect?.addEventListener('change', onTaskChange);
         assignmentForm?.addEventListener('submit', onSaveAssignment);
         assignProjectForm?.addEventListener('submit', onAssignProject);
+        viewButtons.forEach(button => {
+            button.addEventListener('click', () => switchView(button.dataset.viewTarget));
+        });
+    }
+
+    function switchView(viewName) {
+        state.currentView = viewName;
+
+        views.forEach(section => {
+            section.hidden = section.dataset.view !== viewName;
+        });
+
+        viewButtons.forEach(button => {
+            const active = button.dataset.viewTarget === viewName;
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-pressed', String(active));
+        });
+
+        document.dispatchEvent(new CustomEvent('manager:viewchange', { detail: { view: viewName } }));
     }
 
     async function loadInitialData() {
@@ -73,6 +97,11 @@
             renderCollaborators();
             renderMonths(null);
             toggleAssignProjectSection();
+
+            if (state.assignedProjects.length && projectSelect) {
+                projectSelect.value = String(state.assignedProjects[0].id);
+                await onProjectChange();
+            }
         } catch (err) {
             showError(err.message || 'Could not load manager home data.');
         }
@@ -191,11 +220,11 @@
         clearMessages();
 
         try {
-            const formData = new FormData(assignProjectForm);
+            const formData = new URLSearchParams(new FormData(assignProjectForm));
             const data = await postForm(`${ctx}/manager-home?action=assignProject`, formData);
 
             if (data.success === false) {
-                showError(data.error || 'Could not assign project.');
+                showStructuredErrors(data);
                 return;
             }
 
@@ -207,6 +236,11 @@
 
             toggleAssignProjectSection();
         } catch (err) {
+            const structured = err?.payload;
+            if (structured) {
+                showStructuredErrors(structured);
+                return;
+            }
             showError(err.message || 'Could not assign project.');
         }
     }

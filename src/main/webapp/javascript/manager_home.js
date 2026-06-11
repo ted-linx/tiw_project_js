@@ -101,6 +101,11 @@
             renderCollaborators();
             renderMonths(null);
             toggleAssignProjectSection();
+
+            if (state.assignedProjects.length && projectSelect) {
+                projectSelect.value = String(state.assignedProjects[0].id);
+                await onProjectChange();
+            }
         } catch (err) {
             showError(err.message || 'Could not load initial data.');
         }

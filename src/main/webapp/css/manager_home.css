@@ -1,8 +1,55 @@
+.manager-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.manager-tabs .btn-secondary {
+    padding: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    position: relative;
+}
+
+.manager-tabs .btn-secondary::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--space-3) * -1 - 1px);
+    height: 2px;
+    background: transparent;
+    transition: background var(--transition-interactive);
+}
+
+.manager-tabs .btn-secondary:hover {
+    color: var(--color-text);
+    background: transparent;
+    border-color: transparent;
+}
+
+.manager-tabs .btn-secondary.is-active {
+    color: var(--color-primary);
+    background: transparent;
+    border: none;
+}
+
+.manager-tabs .btn-secondary.is-active::after {
+    background: var(--color-primary);
+}
+
 .manager-home-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
-    gap: var(--space-6);
-    align-items: start;
+    display: block;
+}
+
+.assignment-panel {
+    width: 100%;
 }
 
 .planned-hours-block {
@@ -54,3 +101,4 @@
         grid-template-columns: 1fr;
     }
 }
+

@@ -86,6 +86,15 @@ public class TaskDAO {
         return tasks;
     }
 
+    public void createAssignment(int task_id, String username) throws SQLException {
+        String query = "INSERT INTO task_assignee(task_id, username) VALUES(?,?)";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setInt(1, task_id);
+            ps.setString(2, username);
+            ps.executeUpdate();
+        }
+    }
+
     public Task getTaskById(int task_id) throws SQLException {
         String query = "SELECT * FROM task WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(query)) {
