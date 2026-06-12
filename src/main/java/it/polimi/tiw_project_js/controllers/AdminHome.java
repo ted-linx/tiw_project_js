@@ -50,7 +50,7 @@ public class AdminHome extends HttpServlet {
                 ProjectDAO projectDAO = new ProjectDAO(connection);
                 UserDAO userDAO = new UserDAO(connection);
 
-                List<Project> createdProjects = projectDAO.getProjectByStatusAndCreator(Project.Status.CREATED, user.getUsername());
+                List<Project> createdProjects = projectDAO.getProjectsByCreator(user.getUsername());
                 List<User> technicalUsers = userDAO.getStaffByRole(User.Role.TECHNICAL);
 
                 JsonObject userJson = new JsonObject();

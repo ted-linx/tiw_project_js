@@ -95,6 +95,14 @@ public class TaskDAO {
         }
     }
 
+    public void deleteAssignments(int taskId) throws SQLException {
+        String query = "DELETE FROM task_assignee WHERE task_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setInt(1, taskId);
+            ps.executeUpdate();
+        }
+    }
+
     public Task getTaskById(int task_id) throws SQLException {
         String query = "SELECT * FROM task WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(query)) {

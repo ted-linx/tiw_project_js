@@ -32,6 +32,17 @@ public class ProjectDAO {
         return list;
     }
 
+    public List<Project> getProjectsByCreator(String creator) throws SQLException {
+        List<Project> list = new ArrayList<>();
+        String query = "SELECT * FROM project WHERE created_by=? ORDER BY id DESC";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, creator);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(createProjectBean(rs));
+            }
+        }
+        return list;
+    }
     public void createProject(ProjectForm projectForm, String creator) throws SQLException {
         String query = "INSERT INTO project(title, duration, status, created_by, manager) VALUES(?,?,?,?,?)";
         try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -130,37 +141,38 @@ public class ProjectDAO {
 
     public boolean canBeConcluded(int projectId) throws SQLException {
         String query = """
-            SELECT
-                EXISTS (
-                    SELECT 1
-                    FROM project p
-                    JOIN work_package w ON w.project_id = p.id
-                    JOIN task t ON t.wp_id = w.id
-                    WHERE p.id = ?
-                      AND p.status <> 'CONCLUDED'
-                ) AS has_tasks,
-                EXISTS (
-                    SELECT 1
-                    FROM project p
-                    JOIN work_package w ON w.project_id = p.id
-                    JOIN task t ON t.wp_id = w.id
-                    WHERE p.id = ?
-                      AND p.status <> 'CONCLUDED'
-                      AND EXISTS (
-                          SELECT 1
-                          FROM planned_hours ph
-                          WHERE ph.task_id = t.id
-                      )
-                      AND (COALESCE((
-                          SELECT SUM(ph.hours)
-                          FROM planned_hours ph
-                          WHERE ph.task_id = t.id
-                      ), 0) > COALESCE((
-                          SELECT SUM(wh.hours)
-                          FROM worked_hours wh
-                          WHERE wh.task_id = t.id
-                      ), 0))
-                ) AS has_incomplete_tasks
+        SELECT EXISTS (
+            SELECT 1
+            FROM project p
+            JOIN work_package w ON w.project_id = p.id
+            JOIN task t ON t.wp_id = w.id
+            WHERE p.id = ?
+              AND p.status = 'ASSIGNED'
+        ) AS has_tasks,
+        EXISTS (
+            SELECT 1
+            FROM project p
+            JOIN work_package w ON w.project_id = p.id
+            JOIN task t ON t.wp_id = w.id
+            WHERE p.id = ?
+              AND p.status = 'ASSIGNED'
+              AND (
+                    COALESCE((
+                        SELECT SUM(ph.hours)
+                        FROM planned_hours ph
+                        WHERE ph.task_id = t.id
+                    ), 0) = 0
+                 OR COALESCE((
+                        SELECT SUM(wh.hours)
+                        FROM worked_hours wh
+                        WHERE wh.task_id = t.id
+                    ), 0) < COALESCE((
+                        SELECT SUM(ph.hours)
+                        FROM planned_hours ph
+                        WHERE ph.task_id = t.id
+                    ), 0)
+              )
+        ) AS has_incomplete_tasks
         """;
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -185,21 +197,61 @@ public class ProjectDAO {
 
     public boolean canBeAssigned(int projectId) throws SQLException {
         String query = """
-            SELECT NOT EXISTS (
+        SELECT
+            EXISTS (
+                SELECT 1
+                FROM project p
+                WHERE p.id = ?
+                  AND p.status = 'CREATED'
+            ) AS is_created,
+            EXISTS (
+                SELECT 1
+                FROM work_package w
+                WHERE w.project_id = ?
+            ) AS has_wps,
+            EXISTS (
                 SELECT 1
                 FROM work_package w
                 LEFT JOIN task t ON t.wp_id = w.id
+                WHERE w.project_id = ?
+                GROUP BY w.id
+                HAVING COUNT(t.id) = 0
+            ) AS has_empty_wp,
+            EXISTS (
+                SELECT 1
+                FROM work_package w
+                JOIN task t ON t.wp_id = w.id
                 LEFT JOIN planned_hours ph ON ph.task_id = t.id
                 WHERE w.project_id = ?
                 GROUP BY t.id
-                HAVING t.id IS NULL
-                   OR COUNT(ph.month) = 0
-            ) AS can_assign
+                HAVING COUNT(ph.month) = 0
+            ) AS has_task_without_planned_hours,
+            EXISTS (
+                SELECT 1
+                FROM work_package w
+                JOIN task t ON t.wp_id = w.id
+                LEFT JOIN task_assignee ta ON ta.task_id = t.id
+                WHERE w.project_id = ?
+                GROUP BY t.id
+                HAVING COUNT(ta.username) = 0
+            ) AS has_task_without_assignees
         """;
+
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setInt(1, projectId);
+            ps.setInt(2, projectId);
+            ps.setInt(3, projectId);
+            ps.setInt(4, projectId);
+            ps.setInt(5, projectId);
+
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getBoolean("can_assign");
+                if (rs.next()) {
+                    return rs.getBoolean("is_created")
+                            && rs.getBoolean("has_wps")
+                            && !rs.getBoolean("has_empty_wp")
+                            && !rs.getBoolean("has_task_without_planned_hours")
+                            && !rs.getBoolean("has_task_without_assignees");
+                }
             }
         }
         return false;

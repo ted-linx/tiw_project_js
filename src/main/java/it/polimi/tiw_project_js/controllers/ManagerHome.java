@@ -402,12 +402,12 @@ public class ManagerHome extends HttpServlet {
         String projectIdParam = trim(req.getParameter("project_id"));
         String wpIdParam = trim(req.getParameter("wp_id"));
         String taskIdParam = trim(req.getParameter("task_id"));
-        String collaborator = trim(req.getParameter("collaborator"));
+        String[] collaboratorParams = req.getParameterValues("collaborators");
 
         if (projectIdParam == null) missing.add("project_id");
         if (wpIdParam == null) missing.add("wp_id");
         if (taskIdParam == null) missing.add("task_id");
-        if (collaborator == null) missing.add("collaborator");
+        if (collaboratorParams == null || collaboratorParams.length == 0) missing.add("collaborators");
 
         Connection connection = null;
 
@@ -440,13 +440,26 @@ public class ManagerHome extends HttpServlet {
                 }
             }
 
-            User collaboratorUser = null;
-            if (collaborator != null) {
-                collaboratorUser = userDAO.getUserByUsername(collaborator);
-                if (collaboratorUser == null) {
-                    invalid.put("collaborator", "Selected collaborator does not exist");
-                } else if (collaborator.equals(user.getUsername())) {
-                    invalid.put("collaborator", "Self-assignment is not allowed");
+            List<String> collaborators = new ArrayList<>();
+            if (collaboratorParams != null) {
+                for (String collaboratorParam : collaboratorParams) {
+                    String collaborator = trim(collaboratorParam);
+                    if (collaborator == null) {
+                        continue;
+                    }
+
+                    User collaboratorUser = userDAO.getUserByUsername(collaborator);
+                    if (collaboratorUser == null) {
+                        invalid.put("collaborators", "One or more selected collaborators do not exist");
+                        break;
+                    }
+                    if (collaborator.equals(user.getUsername())) {
+                        invalid.put("collaborators", "Self-assignment is not allowed");
+                        break;
+                    }
+                    if (!collaborators.contains(collaborator)) {
+                        collaborators.add(collaborator);
+                    }
                 }
             }
 
@@ -481,7 +494,11 @@ public class ManagerHome extends HttpServlet {
             for (Map.Entry<Integer, Integer> entry : hoursByMonth.entrySet()) {
                 plannedHoursDAO.saveOrUpdatePlannedHours(taskId, entry.getKey(), entry.getValue());
             }
-            taskDAO.createAssignment(taskId, collaboratorUser.getUsername());
+
+            taskDAO.deleteAssignments(taskId);
+            for (String collaboratorUsername : collaborators) {
+                taskDAO.createAssignment(taskId, collaboratorUsername);
+            }
 
             JsonObject result = new JsonObject();
             result.addProperty("success", true);
@@ -575,26 +592,10 @@ public class ManagerHome extends HttpServlet {
             wpMap.put("id", wp.getId());
             wpMap.put("order_number", wp.getOrder_number());
             wpMap.put("title", wp.getTitle());
-            wpMap.put("plannedHours", aggregatePlanned(wp));
-            wpMap.put("workedHours", aggregateWorked(wp));
+            wpMap.put("plannedHours", wp.getTotalPlannedHours());
+            wpMap.put("workedHours", wp.getTotalWorkedHours());
             wpMap.put("tasks", wp.getTasks());
             result.add(wpMap);
-        }
-        return result;
-    }
-
-    private Map<Integer, Integer> aggregatePlanned(WP wp) {
-        Map<Integer, Integer> result = zeroMap(wp.getEnd_month());
-        for (Task task : wp.getTasks()) {
-            addInto(result, task.getPlanned_hours());
-        }
-        return result;
-    }
-
-    private Map<Integer, Integer> aggregateWorked(WP wp) {
-        Map<Integer, Integer> result = zeroMap(wp.getEnd_month());
-        for (Task task : wp.getTasks()) {
-            addInto(result, task.getWorked_hours());
         }
         return result;
     }

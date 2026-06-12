@@ -304,15 +304,20 @@ import { showSuccess, showError, clearMessages, initGreeting, initLogout } from 
     }
 
     function renderCollaborators() {
-        fillSelect(
+        const currentUsername = window.APP_USER?.username || '';
+
+        const availableCollaborators = state.collaborators.filter(c =>
+            c.username && c.username !== currentUsername
+        );
+
+        fillMultiSelect(
             collaboratorSelect,
-            state.collaborators,
-            state.collaborators.length ? '— Select a collaborator —' : '— No collaborators available —',
+            availableCollaborators,
             c => ({
                 value: c.username,
                 label: c.fullName || `${c.lastName || c.lastname || ''} ${c.firstName || c.firstname || ''}`.trim()
             }),
-            state.collaborators.length === 0
+            availableCollaborators.length === 0
         );
     }
 
@@ -372,6 +377,22 @@ import { showSuccess, showError, clearMessages, initGreeting, initLogout } from 
 
         selectEl.disabled = disabled;
         selectEl.value = '';
+    }
+
+    function fillMultiSelect(selectEl, items, mapper, disabled = false) {
+        if (!selectEl) return;
+
+        selectEl.innerHTML = '';
+
+        items.forEach(item => {
+            const mapped = mapper(item);
+            const option = document.createElement('option');
+            option.value = mapped.value;
+            option.textContent = mapped.label;
+            selectEl.appendChild(option);
+        });
+
+        selectEl.disabled = disabled;
     }
 
     function formatFieldName(name) {

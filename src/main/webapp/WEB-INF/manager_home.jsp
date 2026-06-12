@@ -7,7 +7,10 @@
   <title>Manager Home – Project Management</title>
   <script>
     window.APP_CONTEXT = '${pageContext.request.contextPath}'
-    window.APP_USER = { fullName: '${user.fullName}'}
+    window.APP_USER = {
+      username: '${user.username}',
+      fullName: '${user.fullName}'
+    }
   </script>
   <script type="module" src="${pageContext.request.contextPath}/javascript/manager_home.js"></script>
   <script type="module" src="${pageContext.request.contextPath}/javascript/manager_project_monitoring.js" defer></script>
@@ -119,11 +122,12 @@
             <span class="field-error" id="task-id-error" hidden="hidden"></span>
           </div>
 
-          <div class="field">
-            <label for="assignment-collaborator">Collaborator</label>
-            <div class="select-wrapper">
-              <select name="collaborator" id="assignment-collaborator" required></select>
+                    <div class="field field-multiselect">
+            <label for="assignment-collaborator">Collaborators</label>
+            <div class="select-wrapper multi-select-wrapper">
+              <select name="collaborators" id="assignment-collaborator" class="multi-select" required multiple size="6"></select>
             </div>
+            <p class="field-hint">Select one or more collaborators with Ctrl/Cmd. The save replaces the previous assignment set.</p>
             <span class="field-error" id="collaborator-error" hidden="hidden"></span>
           </div>
 

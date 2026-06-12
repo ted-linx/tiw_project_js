@@ -22,7 +22,7 @@ export function showSuccess(message) {
     if (!alert || !msg) return;
     msg.textContent = message;
     alert.removeAttribute('hidden');
-    alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 /**
@@ -36,7 +36,7 @@ export function showError(message) {
     if (msgErr)    msgErr.textContent = message;
     if (alertErr)  alertErr.removeAttribute('hidden');
     if (alertSucc) alertSucc.setAttribute('hidden', 'hidden');
-    if (alertErr)  alertErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (alertErr)  alertErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 /**
