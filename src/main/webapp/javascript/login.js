@@ -1,21 +1,10 @@
+import { showError, clearError } from './utils.js';
+
 (function () {
   const ctx = window.APP_CONTEXT || '';
 
   const form = document.getElementById('login-form');
-  const alertError = document.getElementById('alert-error');
-  const errorMsg = document.getElementById('error-message');
   const submitBtn = form.querySelector('button[type="submit"]');
-
-  function showError(message) {
-    errorMsg.textContent = message;
-    alertError.removeAttribute('hidden');
-    alertError.focus();
-  }
-
-  function clearError() {
-    alertError.setAttribute('hidden', '');
-    errorMsg.textContent = '';
-  }
 
   function setLoading(loading) {
     submitBtn.disabled = loading;

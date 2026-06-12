@@ -1,3 +1,5 @@
+import { clearMessages } from './utils.js';
+
 (() => {
     const ctx = window.APP_CONTEXT || '';
     const nav = document.getElementById('collaborator-monitor-nav');
@@ -14,10 +16,15 @@
     };
 
     document.addEventListener('manager:viewchange', event => {
+        clearMessages();
         if (event.detail?.view === 'collaborators' && !state.loaded) {
             loadCollaborators();
         }
     });
+
+    document.addEventListener('manager:save-assignment', event => {
+        state.loaded = false;
+    })
 
     async function loadCollaborators() {
         const data = await getJSON(`${ctx}/manager-home?action=collaboratorMonitoringList`);

@@ -10,7 +10,7 @@
   <script>
     window.APP_CONTEXT = '${pageContext.request.contextPath}';
   </script>
-  <script src="${pageContext.request.contextPath}/javascript/login.js" defer></script>
+  <script type="module" src="${pageContext.request.contextPath}/javascript/login.js" defer></script>
 
   <style>
     /* ══════════════════════════════════════════

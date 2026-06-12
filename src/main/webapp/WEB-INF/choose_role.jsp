@@ -9,7 +9,7 @@
         window.APP_CONTEXT = '${pageContext.request.contextPath}';
         window.APP_USER = { fullName: '${user.fullName}' };
     </script>
-    <script src="${pageContext.request.contextPath}/javascript/choose_role.js" defer></script>
+    <script type="module" src="${pageContext.request.contextPath}/javascript/choose_role.js" defer></script>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css"/>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/choose_role.css"/>
 </head>

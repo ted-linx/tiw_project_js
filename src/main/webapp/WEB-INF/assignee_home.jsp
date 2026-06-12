@@ -11,7 +11,7 @@
     window.APP_USER = { fullName: '${user.fullName}', username: '${user.username}' };
   </script>
 
-  <script src="${pageContext.request.contextPath}/javascript/assignee_home.js" defer></script>
+  <script type="module" src="${pageContext.request.contextPath}/javascript/assignee_home.js" defer></script>
 
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css"/>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/verify.css"/>

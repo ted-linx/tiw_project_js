@@ -1,12 +1,15 @@
+import {
+  showSuccess,
+  showError,
+  clearSuccess,
+  clearError,
+  initGreeting,
+  initLogout
+} from './utils.js';
+
 (() => {
   const ctx = window.APP_CONTEXT || '';
 
-  const greeting = document.getElementById('greeting');
-  const logoutBtn = document.getElementById('btn-logout');
-  const alertSuccess = document.getElementById('alert-success');
-  const successMsg = document.getElementById('success-message');
-  const alertError = document.getElementById('alert-error');
-  const errorMsg = document.getElementById('error-message');
   const emptyStateProjects = document.getElementById('empty-state-projects');
   const projectNav = document.getElementById('project-nav');
   const detailPlaceholder = document.getElementById('detail-placeholder');
@@ -20,33 +23,9 @@
   let originalProjectSnapshot = null;
   let isDirty = false;
 
-  if (greeting && window.APP_USER?.fullName) {
-    greeting.innerHTML = `Hello, <strong>${window.APP_USER.fullName}</strong>`;
-  }
+  initGreeting();
 
-  function showSuccess(message) {
-    if (!alertSuccess || !successMsg) return;
-    successMsg.textContent = message;
-    alertSuccess.removeAttribute('hidden');
-    alertSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
 
-  function showError(message) {
-    if (errorMsg) errorMsg.textContent = message;
-    if (alertError) alertError.hidden = false;
-    if (alertSuccess) alertSuccess.hidden = true;
-    alertError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  function clearError() {
-    if (alertError) alertError.setAttribute('hidden', 'hidden');
-    if (errorMsg) errorMsg.textContent = '';
-  }
-
-  function clearSuccess() {
-    if (alertSuccess) alertSuccess.setAttribute('hidden', 'hidden');
-    if (successMsg) successMsg.textContent = '';
-  }
 
   function markDirty() {
     isDirty = true;
@@ -563,11 +542,7 @@
     });
   }
 
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      window.location.href = `${ctx}/logout`;
-    });
-  }
+  initLogout(ctx);
 
   loadPage();
 })();

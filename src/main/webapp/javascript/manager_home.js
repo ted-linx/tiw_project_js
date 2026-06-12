@@ -1,12 +1,7 @@
+import { showSuccess, showError, clearMessages, initGreeting, initLogout } from './utils.js';
+
 (() => {
     const ctx = window.APP_CONTEXT || '';
-
-    const greeting = document.getElementById('greeting');
-    const logoutBtn = document.getElementById('btn-logout');
-    const alertSuccess = document.getElementById('alert-success');
-    const successMsg = document.getElementById('success-message');
-    const alertError = document.getElementById('alert-error');
-    const errorMsg = document.getElementById('error-message');
 
     const projectSelect = document.getElementById('assignment-project-id');
     const wpSelect = document.getElementById('assignment-wp-id');
@@ -38,13 +33,8 @@
     document.addEventListener('DOMContentLoaded', init);
 
     function init() {
-        if (greeting && window.APP_USER?.fullName) {
-            greeting.innerHTML = `Hello, <strong>${window.APP_USER.fullName}</strong>`;
-        }
-
-        if (logoutBtn) {
-            logoutBtn.href = `${ctx}/logout`;
-        }
+        initGreeting();
+        initLogout(ctx);
 
         bindEvents();
         switchView(state.currentView);
@@ -200,6 +190,7 @@
             }
 
             showSuccess(data.message || 'Assignment saved successfully.');
+            document.dispatchEvent(new CustomEvent('manager:save-assignment'))
         } catch (err) {
             const structured = err?.payload;
             if (structured) {
@@ -383,20 +374,6 @@
         selectEl.value = '';
     }
 
-    function showSuccess(message) {
-        if (successMsg) successMsg.textContent = message;
-        if (alertSuccess) alertSuccess.hidden = false;
-        if (alertError) alertError.hidden = true;
-        alertSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function showError(message) {
-        if (errorMsg) errorMsg.textContent = message;
-        if (alertError) alertError.hidden = false;
-        if (alertSuccess) alertSuccess.hidden = true;
-        alertError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
     function formatFieldName(name) {
         return name
             .replaceAll('_', ' ')
@@ -423,12 +400,5 @@
             : (data.error || 'Could not save assignment.');
 
         showError(message);
-    }
-
-    function clearMessages() {
-        if (alertSuccess) alertSuccess.hidden = true;
-        if (alertError) alertError.hidden = true;
-        if (successMsg) successMsg.textContent = '';
-        if (errorMsg) errorMsg.textContent = '';
     }
 })();

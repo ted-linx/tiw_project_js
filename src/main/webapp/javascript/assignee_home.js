@@ -1,11 +1,13 @@
+import {
+    showSuccess,
+    showError,
+    clearMessages,
+    initGreeting
+} from './utils.js';
+
 (() => {
     const ctx = window.APP_CONTEXT || '';
 
-    const greeting = document.getElementById('greeting');
-    const alertSuccess = document.getElementById('alert-success');
-    const successMsg = document.getElementById('success-message');
-    const alertError = document.getElementById('alert-error');
-    const errorMsg = document.getElementById('error-message');
     const emptyStateProjects = document.getElementById('empty-state-projects');
     const projectNav = document.getElementById('project-nav');
     const detailPlaceholder = document.getElementById('detail-placeholder');
@@ -17,36 +19,11 @@
         editingKey: null
     };
 
-    if (greeting && window.APP_USER?.fullName) {
-        greeting.innerHTML = `Hello, <strong>${window.APP_USER.fullName}</strong>`;
-    }
+    initGreeting();
 
     init();
 
-    function showSuccess(message) {
-        if (!alertSuccess || !successMsg) return;
-        successMsg.textContent = message;
-        alertSuccess.hidden = false;
-        if (alertError) alertError.hidden = true;
-        alertSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
 
-    function showError(message) {
-        if (errorMsg) errorMsg.textContent = message;
-        if (alertError) {
-            alertError.hidden = false;
-            alertError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            alertError.focus?.();
-        }
-        if (alertSuccess) alertSuccess.hidden = true;
-    }
-
-    function clearMessages() {
-        if (alertSuccess) alertSuccess.hidden = true;
-        if (alertError) alertError.hidden = true;
-        if (successMsg) successMsg.textContent = '';
-        if (errorMsg) errorMsg.textContent = '';
-    }
 
     async function getJSON(url) {
         const response = await fetch(url, {
