@@ -23,6 +23,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -65,7 +67,7 @@ public class AdminHome extends HttpServlet {
                 JsonObject result = new JsonObject();
                 result.add("user", userJson);
                 result.add("technicalUsers", gson.toJsonTree(technicalUsers));
-                result.add("createdProjects", gson.toJsonTree(createdProjects));
+                result.add("createdProjects", gson.toJsonTree(enrichProjects(createdProjects)));
 
                 writeJson(resp, HttpServletResponse.SC_OK, result);
                 return;
@@ -279,6 +281,68 @@ public class AdminHome extends HttpServlet {
             ConnectionHandler.closeConnection(connection);
         } catch (SQLException ignore) {
         }
+    }
+
+    private List<Map<String, Object>> enrichProjects(List<Project> projects) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (projects == null) return result;
+
+        for (Project project : projects) {
+            Map<String, Object> projectMap = new LinkedHashMap<>();
+            projectMap.put("id", project.getId());
+            projectMap.put("title", project.getTitle());
+            projectMap.put("duration", project.getDuration());
+            projectMap.put("manager", project.getManager());
+            projectMap.put("status", project.getStatus());
+            projectMap.put("workPackages", enrichWps(project.getWorkPackages()));
+            result.add(projectMap);
+        }
+
+        return result;
+    }
+
+    private List<Map<String, Object>> enrichWps(List<WP> wps) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (wps == null) return result;
+
+        for (WP wp : wps) {
+            Map<String, Object> wpMap = new LinkedHashMap<>();
+            wpMap.put("id", wp.getId());
+            wpMap.put("order_number", wp.getOrder_number());
+            wpMap.put("title", wp.getTitle());
+            wpMap.put("start_month", wp.getStart_month());
+            wpMap.put("end_month", wp.getEnd_month());
+            wpMap.put("project_id", wp.getProject_id());
+            wpMap.put("totalPlannedHours", wp.getTotalPlannedHours());
+            wpMap.put("totalWorkedHours", wp.getTotalWorkedHours());
+            wpMap.put("tasks", enrichTasks(wp.getTasks()));
+            result.add(wpMap);
+        }
+
+        return result;
+    }
+
+    private List<Map<String, Object>> enrichTasks(List<Task> tasks) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (tasks == null) return result;
+
+        for (Task task : tasks) {
+            Map<String, Object> taskMap = new LinkedHashMap<>();
+            taskMap.put("id", task.getId());
+            taskMap.put("order_number", task.getOrder_number());
+            taskMap.put("title", task.getTitle());
+            taskMap.put("description", task.getDescription());
+            taskMap.put("start_month", task.getStart_month());
+            taskMap.put("end_month", task.getEnd_month());
+            taskMap.put("wp_id", task.getWp_id());
+            taskMap.put("planned_hours", task.getPlanned_hours());
+            taskMap.put("worked_hours", task.getWorked_hours());
+            taskMap.put("totalPlannedHours", task.getTotalPlannedHours());
+            taskMap.put("totalWorkedHours", task.getTotalWorkedHours());
+            result.add(taskMap);
+        }
+
+        return result;
     }
 
     private void sendJsonError(HttpServletResponse resp, int status, String message) throws IOException {

@@ -296,7 +296,13 @@
 }
 
 .action-chip--danger {
+    border-color: color-mix(in srgb, #8f2d2d 45%, white);
     color: #8f2d2d;
+}
+
+.action-chip--history {
+    border-color: color-mix(in srgb, #3f8f2d 45%, white);
+    color: #3f8f2d;
 }
 
 .action-chip__icon {
@@ -348,13 +354,15 @@
 }
 
 .hours-pill {
-    display: inline-flex;
-    padding: var(--space-2) var(--space-3);
+    display: inline-block;
+    padding: 2px var(--space-2);
     border-radius: 999px;
-    font-weight: 700;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
 }
-.hours-pill.planned { background: #dfe8ff; color: #3157d5; }
-.hours-pill.worked { background: #d9efde; color: #437a22; }
+.hours-pill.planned { background: var(--color-primary-hl); color: var(--color-primary); }
+.hours-pill.worked  { background: #d1fae5;                 color: #065f46; }
 
 .inline-edit {
     cursor: text;

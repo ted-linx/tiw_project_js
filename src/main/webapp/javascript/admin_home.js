@@ -21,9 +21,14 @@ import {
   let user = null;
   let currentProject = null;
   let originalProjectSnapshot = null;
+  let undoStack = [];
+  let redoStack = [];
   let isDirty = false;
 
   initGreeting();
+  initLogout();
+
+  document.addEventListener('keydown', handleHistoryShortcut);
 
 
 
@@ -41,7 +46,37 @@ import {
 
   function setCleanSnapshot(project) {
     originalProjectSnapshot = cloneProject(project);
+    undoStack = [];
+    redoStack = [];
     clearDirty();
+  }
+
+  function pushUndoState() {
+    if (!currentProject) return;
+    undoStack.push(cloneProject(currentProject));
+    redoStack = [];
+  }
+
+  function restoreProjectState(snapshot) {
+    if (!snapshot) return;
+    currentProject = normalizeProject(cloneProject(snapshot));
+    refreshDirtyState();
+    renderProjectList();
+    renderWorkspace();
+  }
+
+  function undoChanges() {
+    if (!currentProject || !undoStack.length) return;
+    redoStack.push(cloneProject(currentProject));
+    const previousState = undoStack.pop();
+    restoreProjectState(previousState);
+  }
+
+  function redoChanges() {
+    if (!currentProject || !redoStack.length) return;
+    undoStack.push(cloneProject(currentProject));
+    const nextState = redoStack.pop();
+    restoreProjectState(nextState);
   }
 
   function refreshDirtyState() {
@@ -51,6 +86,39 @@ import {
     }
 
     isDirty = JSON.stringify(currentProject) !== JSON.stringify(originalProjectSnapshot);
+  }
+
+  function revertUnsavedChanges() {
+    if (!currentProject || !originalProjectSnapshot) return;
+
+    redoStack.push(cloneProject(currentProject));
+    restoreProjectState(originalProjectSnapshot);
+    undoStack = [];
+    showSuccess('Unsaved changes discarded.');
+  }
+
+  function handleHistoryShortcut(event) {
+    const key = String(event.key).toLowerCase();
+    const hasModifier = event.ctrlKey || event.metaKey;
+    if (!hasModifier) return;
+
+    const target = event.target;
+    const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable;
+    if (isTyping) return;
+
+    const isUndoShortcut = !event.shiftKey && key === 'z';
+    const isRedoShortcut = (event.shiftKey && key === 'z') || key === 'y';
+
+    if (isUndoShortcut && undoStack.length) {
+      event.preventDefault();
+      undoChanges();
+      return;
+    }
+
+    if (isRedoShortcut && redoStack.length) {
+      event.preventDefault();
+      redoChanges();
+    }
   }
 
   function normalizeTask(task, taskIndex, wp) {
@@ -135,6 +203,8 @@ import {
         : [];
       currentProject = null;
       originalProjectSnapshot = null;
+      undoStack = [];
+      redoStack = [];
       clearDirty();
 
       renderProjectList();
@@ -231,6 +301,9 @@ import {
         </div>
         <div class="detail-actions">
           <button type="button" class="action-chip action-chip--primary" data-action="add-wp">+ WP</button>
+          ${(isNewProject || isDirty) ? '<button type="button" class="action-chip action-chip--history" data-action="revert-project">Reset</button>' : ''}
+          ${undoStack.length ? '<button type="button" class="action-chip action-chip--history" data-action="undo-project">Undo</button>' : ''}
+          ${redoStack.length ? '<button type="button" class="action-chip action-chip--history" data-action="redo-project">Redo</button>' : ''}
           ${(isNewProject || isDirty) ? '<button type="button" class="btn btn-primary" data-action="save-project">Save</button>' : ''}
         </div>
       </div>
@@ -323,6 +396,12 @@ import {
 
     projectDetails.querySelectorAll('.inline-select').forEach((sel) => {
       sel.addEventListener('change', () => {
+        const currentValue = currentProject?.[sel.dataset.field];
+        if (String(currentValue ?? '') === sel.value) {
+          return;
+        }
+
+        pushUndoState();
         applyValue(sel.dataset, sel.value);
         refreshDirtyState();
         renderProjectList();
@@ -331,6 +410,9 @@ import {
     });
 
     projectDetails.querySelector('[data-action="add-wp"]')?.addEventListener('click', addWP);
+    projectDetails.querySelector('[data-action="revert-project"]')?.addEventListener('click', revertUnsavedChanges);
+    projectDetails.querySelector('[data-action="undo-project"]')?.addEventListener('click', undoChanges);
+    projectDetails.querySelector('[data-action="redo-project"]')?.addEventListener('click', redoChanges);
     projectDetails.querySelector('[data-action="save-project"]')?.addEventListener('click', saveCurrentProject);
 
     projectDetails.querySelectorAll('[data-action="add-task"]').forEach((btn) => {
@@ -357,7 +439,17 @@ import {
     input.select();
 
     const commit = () => {
-      applyValue(el.dataset, input.value.trim());
+      const nextValue = input.value.trim();
+      const currentValueNormalized = String(normalizeValue(el.dataset.field, currentValue === '—' ? '' : currentValue, currentValue));
+      const nextValueNormalized = String(normalizeValue(el.dataset.field, nextValue, currentValue));
+
+      if (nextValueNormalized === currentValueNormalized) {
+        renderWorkspace();
+        return;
+      }
+
+      pushUndoState();
+      applyValue(el.dataset, nextValue);
       refreshDirtyState();
       renderProjectList();
       renderWorkspace();
@@ -409,6 +501,8 @@ import {
       return;
     }
 
+    pushUndoState();
+
     const workPackages = Array.isArray(currentProject.workPackages)
       ? currentProject.workPackages
       : (currentProject.workPackages = []);
@@ -431,6 +525,7 @@ import {
 
   function deleteWP(wpIndex) {
     if (!currentProject?.workPackages) return;
+    pushUndoState();
     currentProject.workPackages.splice(wpIndex, 1);
     currentProject.workPackages = currentProject.workPackages.map((wp, index) => normalizeWorkPackage({ ...wp, order_number: index + 1 }, index));
     refreshDirtyState();
@@ -442,6 +537,8 @@ import {
     const wp = currentProject?.workPackages?.[wpIndex];
     if (!wp) return;
     if (!Array.isArray(wp.tasks)) wp.tasks = [];
+
+    pushUndoState();
 
     wp.tasks.push(normalizeTask({
       order_number: wp.tasks.length + 1,
@@ -463,6 +560,7 @@ import {
   function deleteTask(wpIndex, taskIndex) {
     const wp = currentProject?.workPackages?.[wpIndex];
     if (!wp || !Array.isArray(wp.tasks)) return;
+    pushUndoState();
     wp.tasks.splice(taskIndex, 1);
     wp.tasks = wp.tasks.map((task, index) => normalizeTask({ ...task, order_number: index + 1 }, index, wp));
     refreshDirtyState();
