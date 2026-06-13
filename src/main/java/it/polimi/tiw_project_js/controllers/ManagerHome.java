@@ -512,9 +512,10 @@ public class ManagerHome extends HttpServlet {
             result.addProperty("message", "Assignment saved successfully");
             writeJson(resp, HttpServletResponse.SC_OK, result);
         } catch (SQLException e) {
+            rollbackQuietly(connection);
             sendJsonError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Database error: " + e.getMessage());
         } finally {
-            closeQuietly(connection);
+            resetAutoCommitAndClose(connection);
         }
     }
 
@@ -671,12 +672,30 @@ public class ManagerHome extends HttpServlet {
         resp.getWriter().write(gson.toJson(jsonObject));
     }
 
+    private void rollbackQuietly(Connection connection) {
+        if (connection == null) return;
+        try {
+            connection.rollback();
+        } catch (SQLException ignore) {
+        }
+    }
+
+    private void resetAutoCommitAndClose(Connection connection) {
+        if (connection == null) return;
+        try {
+            connection.setAutoCommit(true);
+        } catch (SQLException ignore) {
+        }
+        try {
+            ConnectionHandler.closeConnection(connection);
+        } catch (SQLException ignore) {
+        }
+
+    }
+
     private void closeQuietly(Connection connection) {
         try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
-        } catch (SQLException ignored) {
-        }
+            ConnectionHandler.closeConnection(connection);
+        } catch (SQLException ignore) { }
     }
 }
