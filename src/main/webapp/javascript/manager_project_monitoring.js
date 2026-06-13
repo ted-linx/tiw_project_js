@@ -1,4 +1,4 @@
-import { clearMessages } from './utils.js';
+import { clearMessages, showSuccess, showError } from './utils.js';
 
 (() => {
     const ctx = window.APP_CONTEXT || '';
@@ -143,6 +143,8 @@ import { clearMessages } from './utils.js';
         const completeBtn = document.getElementById('complete-project-btn');
         if (completeBtn) {
             completeBtn.addEventListener('click', async () => {
+                clearMessages();
+
                 const response = await fetch(`${ctx}/manager-home?action=completeProject`, {
                     method: 'POST',
                     headers: {
@@ -154,7 +156,7 @@ import { clearMessages } from './utils.js';
 
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    alert(payload.error || 'Unable to complete project.');
+                    showError(payload.error || 'Unable to complete project.');
                     return;
                 }
 
@@ -163,6 +165,7 @@ import { clearMessages } from './utils.js';
                     projectInList.status = 'CONCLUDED';
                 }
                 await selectProject(project.id);
+                showSuccess(payload.message || 'Project concluded successfully.');
             });
         }
     }

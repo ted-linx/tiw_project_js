@@ -143,9 +143,15 @@ public class AssigneeHome extends HttpServlet {
             connection = ConnectionHandler.getConnection(getServletContext());
             TaskAssigneeDAO taskAssigneeDAO = new TaskAssigneeDAO(connection);
             WorkedHoursDAO workedHoursDAO = new WorkedHoursDAO(connection);
+            ProjectDAO projectDAO = new ProjectDAO(connection);
 
             if (!taskAssigneeDAO.isCollaboratorAssignedToProject(user.getUsername(), projectId)) {
                 sendJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "You are not assigned to this project.");
+                return;
+            }
+
+            if(!projectDAO.getProjectById(projectId).getStatus().equals(Project.Status.ASSIGNED)) {
+                sendJson(resp, HttpServletResponse.SC_FORBIDDEN, "Project must be in status ASSIGNED.");
                 return;
             }
 

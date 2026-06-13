@@ -221,11 +221,13 @@ public class ProjectDAO {
                 SELECT 1
                 FROM work_package w
                 JOIN task t ON t.wp_id = w.id
-                LEFT JOIN planned_hours ph ON ph.task_id = t.id
+                LEFT JOIN planned_hours ph
+                    ON ph.task_id = t.id
+                   AND ph.hours > 0
                 WHERE w.project_id = ?
-                GROUP BY t.id
-                HAVING COUNT(ph.month) = 0
-            ) AS has_task_without_planned_hours,
+                GROUP BY t.id, t.start_month, t.end_month
+                HAVING COUNT(DISTINCT ph.month) < (t.end_month - t.start_month + 1)
+            ) AS has_task_without_complete_planned_hours,
             EXISTS (
                 SELECT 1
                 FROM work_package w
@@ -249,7 +251,7 @@ public class ProjectDAO {
                     return rs.getBoolean("is_created")
                             && rs.getBoolean("has_wps")
                             && !rs.getBoolean("has_empty_wp")
-                            && !rs.getBoolean("has_task_without_planned_hours")
+                            && !rs.getBoolean("has_task_without_complete_planned_hours")
                             && !rs.getBoolean("has_task_without_assignees");
                 }
             }

@@ -94,6 +94,7 @@ public class ManagerHome extends HttpServlet {
             UserDAO userDAO = new UserDAO(connection);
 
             List<Project> assignedProjects = projectDAO.getProjectsByManager(user.getUsername());
+            assignedProjects = assignedProjects.stream().filter(p -> p.getStatus().equals(Project.Status.CREATED)).toList();
             List<User> collaborators = userDAO.getStaffByRole(User.Role.TECHNICAL);
 
             JsonObject result = new JsonObject();
@@ -417,6 +418,7 @@ public class ManagerHome extends HttpServlet {
             Integer taskId = parsePositiveInt(taskIdParam, "task_id", invalid);
 
             connection = ConnectionHandler.getConnection(getServletContext());
+            connection.setAutoCommit(false);
             ProjectDAO projectDAO = new ProjectDAO(connection);
             WPDAO wpDAO = new WPDAO(connection);
             TaskDAO taskDAO = new TaskDAO(connection);
@@ -425,6 +427,9 @@ public class ManagerHome extends HttpServlet {
 
             if (projectId != null && !projectDAO.userIsProjectManager(user.getUsername(), projectId)) {
                 invalid.put("project_id", "You are not the manager of this project");
+            }
+            if(projectId != null && !projectDAO.getProjectById(projectId).getStatus().equals(Project.Status.CREATED)) {
+                invalid.put("project_id", "Project must be in status CREATED");
             }
             if (projectId != null && wpId != null && !wpDAO.projectContainsWP(projectId, wpId)) {
                 invalid.put("wp_id", "Selected work package does not belong to the chosen project");
@@ -500,6 +505,8 @@ public class ManagerHome extends HttpServlet {
                 taskDAO.createAssignment(taskId, collaboratorUsername);
             }
 
+            connection.commit();
+
             JsonObject result = new JsonObject();
             result.addProperty("success", true);
             result.addProperty("message", "Assignment saved successfully");
@@ -529,7 +536,7 @@ public class ManagerHome extends HttpServlet {
                 return;
             }
             if (!projectDAO.canBeAssigned(projectId)) {
-                sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "The project cannot be assigned yet. Make sure every task has planned hours.");
+                sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Cannot assign project: some tasks still lack collaborators or planned hours for every month.");
                 return;
             }
 
