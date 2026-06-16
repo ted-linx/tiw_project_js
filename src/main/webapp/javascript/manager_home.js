@@ -156,16 +156,18 @@ import { showSuccess, showError, clearMessages, initGreeting, initLogout } from 
     async function onTaskChange() {
         clearMessages();
 
+        const projectId = projectSelect.value;
+        const wpId = wpSelect.value;
         const taskId = taskSelect.value;
 
         state.selectedTask = null;
         renderMonths(null);
 
-        if (!taskId) return;
+        if (!taskId || !wpId || !projectId) return;
 
         try {
             const data = await getJSON(
-                `${ctx}/manager-home?action=taskDetails&task_id=${encodeURIComponent(taskId)}`
+                `${ctx}/manager-home?action=taskDetails&project_id=${encodeURIComponent(projectId)}&wp_id=${encodeURIComponent(wpId)}&task_id=${encodeURIComponent(taskId)}`
             );
 
             state.selectedTask = data.selectedTask || data.task || null;
@@ -217,9 +219,10 @@ import { showSuccess, showError, clearMessages, initGreeting, initLogout } from 
             showSuccess(data.message || 'Project assigned successfully.');
 
             if (state.selectedProject) {
-                state.selectedProject.status = 'ASSIGNED';
+                state.selectedProject = null;
             }
 
+            renderProjects();
             toggleAssignProjectSection();
         } catch (err) {
             const structured = err?.payload;

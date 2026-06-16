@@ -1,0 +1,34 @@
+sequenceDiagram
+    actor U as User
+    participant AJ as assignee_home.js
+    participant SU as Success message
+    participant H as Hour cell
+    participant E as Error message
+    participant AH as AssigneeHome
+    participant S as Session
+    participant PD as WorkedHoursDAO
+    participant T as TaskAssigneeDAO
+
+
+    U ->> AJ: hour cell blur
+    AJ ->> AH: AJAX POST /assignee-home?action=saveWorkedHours
+    AH ->> S: getAttribute(user)
+    S -->> AH: user
+
+    AH ->> AH: read and validate post parameters
+
+    AH ->> PD: saveOrUpdateWorkedHours(...)
+    AH ->> T: getAssignedTaskDetails(user.username, task_id)
+    T -->> AH: updatedTask
+    AH ->> AH: set up response data
+    AH -->> AJ: data response
+
+    alt success
+    AJ ->> H: update worked hours
+    AJ ->> SU: show success message
+    else error
+    AJ ->> E: show error message
+    end
+
+
+

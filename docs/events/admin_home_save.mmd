@@ -1,0 +1,43 @@
+sequenceDiagram
+    actor U as User
+    participant AJ as admin_home.js
+    participant PL as Project List
+    participant PT as Project Table
+    participant AH as AdminHome
+    participant S as Session
+    participant UD as UserDAO
+    participant PD as ProjectDAO
+    participant W as WPDAO
+    participant T as TaskDAO
+    participant P as PlannedHoursDAO
+
+
+    U ->> AJ: save
+    AJ ->> AH: AJAX POST /admin-home?action=save
+    AH ->> S: getAttribute(user)
+    S -->> AH: user
+
+    alt new project
+        AH ->> PD: createProjectAndReturnId(newProject, user.username)
+    else existing project
+        AH ->> PD: updateProject(updatedProject)
+        AH ->> W: deleteWPsByProject(updatedProject.project_id)
+        AH ->> T: deleteTasksByProject(updatedProject.project_id)
+    end
+
+    alt for each wp
+        AH ->> W: createWPAndReturnId(...)
+        alt for each task
+            AH ->> T: createTaskAndReturnId(...)
+            alt for each month
+                AH ->> P: updateOrSavePlannedHours(...)
+            end
+        end
+    end
+    AH -->> AJ: data response
+
+    AJ ->> PL: renderProjectList()
+    AJ ->> PT: rendeWorkspace()
+
+
+

@@ -1,0 +1,29 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_monitor_collaborators.js
+    participant P as Collaborator List
+    participant MH as ManagerHome
+    participant S as Session
+    participant PD as UserDAO
+
+
+    U ->> M: view change to 'collaborators'
+    alt state.loaded = false
+        M ->> MH: AJAX GET /manager-home?action=monitorCollaboratorsList
+        MH ->> S: getAttribute(user)
+        S -->> MH: user
+        MH ->> PD: getCollaboratorsByManager(user.username)
+        PD -->> MH: collaborators
+        alt for each collaborator
+        MH ->> MH: setup collaborator data response
+        end
+
+        MH -->> M: data response
+        M ->> P: render collaborator list
+    end
+
+
+
+
+
+

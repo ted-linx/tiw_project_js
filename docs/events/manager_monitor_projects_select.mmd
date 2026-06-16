@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_monitor_project.js
+    participant P as Project Details
+    participant B as Conclude button
+    participant MH as ManagerHome
+    participant S as Session
+    participant PD as ProjectDAO
+
+
+    U ->> M: select project in project list
+    M ->> MH: AJAX GET /manager-home?action=monitorProject
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> PD: getProjectById(project_id)
+    PD -->> MH: selectedProject
+    MH ->> MH: build project details
+    MH -->> M: data response
+    M ->> P: render project details
+    alt project can be concluded
+    M ->> B: show conclude button
+    end
+
+
+
+
+
+

@@ -13,8 +13,8 @@
     }
   </script>
   <script type="module" src="${pageContext.request.contextPath}/javascript/manager_home.js"></script>
-  <script type="module" src="${pageContext.request.contextPath}/javascript/manager_project_monitoring.js" defer></script>
-  <script type="module" src="${pageContext.request.contextPath}/javascript/manager_collaborator_monitoring.js" defer></script>
+  <script type="module" src="${pageContext.request.contextPath}/javascript/manager_monitor_project.js" defer></script>
+  <script type="module" src="${pageContext.request.contextPath}/javascript/manager_monitor_collaborators.js" defer></script>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css"/>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/verify.css"/>
   <link rel="stylesheet" href="${pageContext.request.contextPath}/css/manager_home.css"/>
@@ -58,8 +58,8 @@
 
   <div class="manager-tabs">
     <button type="button" class="btn-secondary" data-view-target="assignment">Assignments</button>
-    <button type="button" class="btn-secondary" data-view-target="projects">Project monitoring</button>
-    <button type="button" class="btn-secondary" data-view-target="collaborators">Collaborator monitoring</button>
+    <button type="button" class="btn-secondary" data-view-target="projects">Monitor projects</button>
+    <button type="button" class="btn-secondary" data-view-target="collaborators">Monitor collaborators</button>
   </div>
 
   <div class="alert alert-success" id="alert-success" hidden="hidden">

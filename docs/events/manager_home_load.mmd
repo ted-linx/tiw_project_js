@@ -1,0 +1,27 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_home.js
+    participant PS as Project Select
+    participant C as Collaborator List
+    participant MH as ManagerHome
+    participant S as Session
+    participant UD as UserDAO
+    participant PD as ProjectDAO
+
+
+    U ->> M: load
+    M ->> MH: AJAX GET /manager-home?action=init
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> PD: getProjectsByManager(user.username)
+    PD -->> MH: assignedProjects
+    MH ->> MH: filter projects with CREATED status
+    MH ->> UD: getStaffByRole(TECHNICAL)
+    UD -->> MH: collaborators
+    MH -->> M: data result
+    M ->> PS: render project select
+    M ->> C: render collaborator list
+
+
+
+

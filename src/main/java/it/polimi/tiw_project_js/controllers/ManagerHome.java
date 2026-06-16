@@ -24,10 +24,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @WebServlet("/manager-home")
 public class ManagerHome extends HttpServlet {
@@ -56,10 +53,10 @@ public class ManagerHome extends HttpServlet {
             case "wps" -> handleLoadWPs(req, resp, user);
             case "tasks" -> handleLoadTasks(req, resp, user);
             case "taskDetails" -> handleTaskDetails(req, resp, user);
-            case "projectMonitoringList" -> handleProjectMonitoringList(resp, user);
-            case "projectMonitoring" -> handleProjectMonitoring(req, resp, user);
-            case "collaboratorMonitoringList" -> handleCollaboratorMonitoringList(resp, user);
-            case "collaboratorMonitoring" -> handleCollaboratorMonitoring(req, resp, user);
+            case "monitorProjectsList" -> handleMonitorProjectsList(resp, user);
+            case "monitorProject" -> handleMonitorProject(req, resp, user);
+            case "monitorCollaboratorsList" -> handleMonitorCollaboratorsList(resp, user);
+            case "monitorCollaborator" -> handleMonitorCollaborator(req, resp, user);
             default -> sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Unknown action");
         }
     }
@@ -81,7 +78,7 @@ public class ManagerHome extends HttpServlet {
         switch (action) {
             case "saveAssignment" -> handleSaveAssignment(req, resp, user);
             case "assignProject" -> handleAssignProject(req, resp, user);
-            case "completeProject" -> handleCompleteProject(req, resp, user);
+            case "concludeProject" -> handleConcludeProject(req, resp, user);
             default -> sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Unknown action");
         }
     }
@@ -185,6 +182,12 @@ public class ManagerHome extends HttpServlet {
     }
 
     private void handleTaskDetails(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+        String projectIdParam = req.getParameter("project_id");
+        String wpIdParam = req.getParameter("wp_id");
+        if (projectIdParam == null || projectIdParam.isBlank() || wpIdParam == null || wpIdParam.isBlank()) {
+            sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Missing project_id or wp_id");
+            return;
+        }
         String taskIdParam = req.getParameter("task_id");
         if (taskIdParam == null || taskIdParam.isBlank()) {
             sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Missing task_id");
@@ -193,21 +196,31 @@ public class ManagerHome extends HttpServlet {
 
         Connection connection = null;
         try {
+            int projectId = Integer.parseInt(projectIdParam);
+            int wpId = Integer.parseInt(wpIdParam);
             int taskId = Integer.parseInt(taskIdParam);
             connection = ConnectionHandler.getConnection(getServletContext());
-            TaskDAO taskDAO = new TaskDAO(connection);
+
             ProjectDAO projectDAO = new ProjectDAO(connection);
             WPDAO wpDAO = new WPDAO(connection);
+            TaskDAO taskDAO = new TaskDAO(connection);
+
+            if (!projectDAO.userIsProjectManager(user.getUsername(), projectId)) {
+                sendJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "You are not the manager of this project");
+                return;
+            }
+            if (!wpDAO.projectContainsWP(projectId, wpId)) {
+                sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Selected work package does not belong to the project");
+                return;
+            }
+            if(!taskDAO.wpContainsTask(wpId, taskId)) {
+                sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Selected task does not belong to the wp");
+                return;
+            }
 
             Task selectedTask = taskDAO.getTaskById(taskId);
             if (selectedTask == null) {
                 sendJsonError(resp, HttpServletResponse.SC_NOT_FOUND, "Task not found");
-                return;
-            }
-
-            WP wp = wpDAO.getWPById(selectedTask.getWp_id());
-            if (wp == null || !projectDAO.userIsProjectManager(user.getUsername(), wp.getProject_id())) {
-                sendJsonError(resp, HttpServletResponse.SC_FORBIDDEN, "You are not allowed to view this task");
                 return;
             }
 
@@ -223,7 +236,7 @@ public class ManagerHome extends HttpServlet {
         }
     }
 
-    private void handleProjectMonitoringList(HttpServletResponse resp, User user) throws ServletException, IOException {
+    private void handleMonitorProjectsList(HttpServletResponse resp, User user) throws ServletException, IOException {
         Connection connection = null;
         try {
             connection = ConnectionHandler.getConnection(getServletContext());
@@ -239,7 +252,7 @@ public class ManagerHome extends HttpServlet {
         }
     }
 
-    private void handleProjectMonitoring(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+    private void handleMonitorProject(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
         String projectIdParam = req.getParameter("project_id");
         if (projectIdParam == null || projectIdParam.isBlank()) {
             sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Missing project_id");
@@ -273,7 +286,7 @@ public class ManagerHome extends HttpServlet {
         }
     }
 
-    private void handleCollaboratorMonitoringList(HttpServletResponse resp, User user) throws ServletException, IOException {
+    private void handleMonitorCollaboratorsList(HttpServletResponse resp, User user) throws ServletException, IOException {
         Connection connection = null;
         try {
             connection = ConnectionHandler.getConnection(getServletContext());
@@ -299,7 +312,7 @@ public class ManagerHome extends HttpServlet {
         }
     }
 
-    private void handleCollaboratorMonitoring(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+    private void handleMonitorCollaborator(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
         String collaboratorParam = req.getParameter("username");
         if (collaboratorParam == null || collaboratorParam.isBlank()) {
             sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Missing username");
@@ -312,7 +325,6 @@ public class ManagerHome extends HttpServlet {
             ProjectDAO projectDAO = new ProjectDAO(connection);
             UserDAO userDAO = new UserDAO(connection);
             TaskAssigneeDAO taskAssigneeDAO = new TaskAssigneeDAO(connection);
-            WorkedHoursDAO workedHoursDAO = new WorkedHoursDAO(connection);
 
             List<User> collaborators = userDAO.getCollaboratorsByManager(user.getUsername());
             User selectedCollaborator = collaborators.stream()
@@ -334,53 +346,16 @@ public class ManagerHome extends HttpServlet {
 
                 Map<Integer, List<Task>> tasksByWp = taskAssigneeDAO.getAssignedTasksByWpInProject(collaboratorParam, assignedProject.getId());
                 List<WP> assignedWps = taskAssigneeDAO.getAssignedWPsOfCollaboratorInProject(collaboratorParam, assignedProject.getId());
-                List<Map<String, Object>> wpRows = new ArrayList<>();
 
-                for (WP wp : assignedWps) {
-                    List<Task> assignedTasks = tasksByWp.getOrDefault(wp.getId(), List.of());
-                    List<Map<String, Object>> taskRows = new ArrayList<>();
-                    Map<Integer, Integer> wpWorked = zeroMap(assignedProject.getDuration());
+                Map<String, Object> projectPayload = new HashMap<>();
+                projectPayload.put("id", assignedProject.getId());
+                projectPayload.put("title", assignedProject.getTitle());
+                projectPayload.put("duration", assignedProject.getDuration());
+                projectPayload.put("status", assignedProject.getStatus());
+                projectPayload.put("visibleWPs", assignedWps);
+                projectPayload.put("tasksByWp", tasksByWp);
 
-                    for (Task task : assignedTasks) {
-                        Map<Integer, Integer> worked = workedHoursDAO.getWorkedHoursOfTaskForCollaborator(
-                                task.getId(),
-                                collaboratorParam,
-                                task.getStart_month(),
-                                task.getEnd_month()
-                        );
-
-                        addInto(wpWorked, worked);
-
-                        Map<String, Object> taskMap = new LinkedHashMap<>();
-                        taskMap.put("id", task.getId());
-                        taskMap.put("order_number", task.getOrder_number());
-                        taskMap.put("title", task.getTitle());
-                        taskMap.put("description", task.getDescription());
-                        taskMap.put("start_month", task.getStart_month());
-                        taskMap.put("end_month", task.getEnd_month());
-                        taskMap.put("worked_hours", worked);
-                        taskRows.add(taskMap);
-                    }
-
-                    Map<String, Object> wpMap = new LinkedHashMap<>();
-                    wpMap.put("id", wp.getId());
-                    wpMap.put("order_number", wp.getOrder_number());
-                    wpMap.put("title", wp.getTitle());
-                    wpMap.put("start_month", wp.getStart_month());
-                    wpMap.put("end_month", wp.getEnd_month());
-                    wpMap.put("workedHours", wpWorked);
-                    wpMap.put("tasks", taskRows);
-                    wpRows.add(wpMap);
-                }
-
-                Map<String, Object> projectMap = new LinkedHashMap<>();
-                projectMap.put("id", assignedProject.getId());
-                projectMap.put("title", assignedProject.getTitle());
-                projectMap.put("duration", assignedProject.getDuration());
-                projectMap.put("status", assignedProject.getStatus());
-                projectMap.put("months", buildMonths(assignedProject.getDuration()));
-                projectMap.put("wps", wpRows);
-                projectRows.add(projectMap);
+                projectRows.add(projectPayload);
             }
 
             JsonObject result = new JsonObject();
@@ -556,7 +531,7 @@ public class ManagerHome extends HttpServlet {
         }
     }
 
-    private void handleCompleteProject(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+    private void handleConcludeProject(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
         String projectIdParam = trim(req.getParameter("project_id"));
         if (projectIdParam == null) {
             sendJsonError(resp, HttpServletResponse.SC_BAD_REQUEST, "Missing project_id");
@@ -578,7 +553,7 @@ public class ManagerHome extends HttpServlet {
                 return;
             }
 
-            projectDAO.completeProject(projectId);
+            projectDAO.concludeProject(projectId);
 
             JsonObject result = new JsonObject();
             result.addProperty("success", true);

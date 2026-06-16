@@ -1,0 +1,24 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_home.js
+    participant MG as Months grid
+    participant PC as Planned hours caption
+    participant MH as ManagerHome
+    participant S as Session
+    participant TD as TaskDAO
+
+
+    U ->> M: change task select
+    M ->> MH: AJAX GET /manager-home?action=tasks&project_id=?&wp_id=?
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> TD: getTaskById(wp_id)
+    TD -->> MH: selectedTask
+    MH -->> M: data result
+    M ->> MG: render month grid
+    M ->> PC: render planned hours caption
+
+
+
+
+

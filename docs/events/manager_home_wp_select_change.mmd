@@ -1,0 +1,22 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_home.js
+    participant TS as Task Select
+    participant MH as ManagerHome
+    participant S as Session
+    participant TD as TaskDAO
+
+
+    U ->> M: change WP select
+    M ->> MH: AJAX GET /manager-home?action=tasks&project_id=?&wp_id=?
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> TD: getTasksOfWp(wp_id)
+    TD -->> MH: wpTasks
+    MH -->> M: data result
+    M ->> TS: render Task select
+
+
+
+
+

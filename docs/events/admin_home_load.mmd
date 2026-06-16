@@ -1,0 +1,27 @@
+sequenceDiagram
+    actor U as User
+    participant AJ as admin_home.js
+    participant PL as Project List
+    participant PT as Project Table
+    participant AH as AdminHome
+    participant S as Session
+    participant UD as UserDAO
+    participant PD as ProjectDAO
+
+
+    U ->> AJ: load
+    AJ ->> AH: AJAX GET /admin-home?action=data
+    AH ->> S: getAttribute(user)
+    S -->> AH: user
+
+    AH ->> PD: getProjectsByCreator(user.username)
+    PD -->> AH: createdProjects
+    AH ->> UD: getStaffByRole(TECHNICAL)
+    UD -->> AH: technicalUsers
+    AH -->> AJ: data response
+
+    AJ ->> PL: renderProjectList()
+    AJ ->> PT: rendeWorkspace()
+
+
+

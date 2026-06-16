@@ -1,0 +1,26 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_monitor_project.js
+    participant P as Project List
+    participant MH as ManagerHome
+    participant S as Session
+    participant PD as ProjectDAO
+
+
+    U ->> M: view change to 'projects'
+    alt state.loaded = false
+        M ->> MH: AJAX GET /manager-home?action=monitorProjectList
+        MH ->> S: getAttribute(user)
+        S -->> MH: user
+        MH ->> PD: getProjectsByManager(user.username)
+        PD -->> MH: assignedProjects
+
+        MH -->> M: data response
+        M ->> P: render project list
+    end
+
+
+
+
+
+

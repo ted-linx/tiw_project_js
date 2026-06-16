@@ -1,0 +1,35 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_home.js
+    participant SU as Success message
+    participant E as Error message
+    participant MH as ManagerHome
+    participant S as Session
+    participant TD as TaskDAO
+    participant PD as PlannedHoursDAO
+
+
+    U ->> M: save button click
+    M ->> MH: AJAX POST /manager-home?action=saveAssignment
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> MH: get, trim and validate post parameters
+    alt for each month
+    MH ->> PD: saveOrUpdatePlannedHours(task_id, month, hours)
+    end
+    MH ->> TD: deleteAssignments(task_id)
+    alt for each collaborator
+    MH ->> TD: createAssignment(task_id, collaborator.username)
+    end
+    MH -->> M: response
+    alt success
+    M ->> M: dispatch manager:save-assignment event
+    M ->> SU: show success message
+    else error
+    M ->> E: show error message
+    end
+
+
+
+
+

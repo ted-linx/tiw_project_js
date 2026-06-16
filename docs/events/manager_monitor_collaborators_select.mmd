@@ -1,0 +1,33 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_monitor_collaborators.js
+    participant C as Collaborator Details
+    participant MH as ManagerHome
+    participant S as Session
+    participant PD as ProjectDAO
+    participant T as TaskAssigneeDAO
+    participant WD as WorkedHoursDAO
+
+
+    U ->> M: select collaborator in collaborator list
+    M ->> MH: AJAX GET /manager-home?action=monitorCollaborator
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> T: getAssignedProjectOfCollaborator(collaborator_username)
+    PD -->> MH: assignedProjects
+    alt for each assigned project managed by user
+        MH ->> T: getAssignedTasksByWpInProject(collaborator_username, project_id)
+        T -->> MH: taskByWPs //Map<Integer, List<Task>>
+        MH ->> T: getAssignedWPsOfCollaboratorInProject(collaborator_username, project_id)
+        T -->> MH: assignedWPs
+
+        MH ->> MH: set up projects data response
+    end
+    MH -->> M: data response
+    M ->> C: render collaborator details
+
+
+
+
+
+

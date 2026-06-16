@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_home.js
+    participant WS as WP Select
+    participant B as Assign button
+    participant MH as ManagerHome
+    participant S as Session
+    participant PD as ProjectDAO
+    participant WD as WPDAO
+
+
+    U ->> M: change project select
+    M ->> MH: AJAX GET /manager-home?action=wps&project_id=?
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> PD: getProjectById(project_id)
+    PD -->> MH: selectedProject
+    MH ->> WD: getWPsOfProject(project_id)
+    WD -->> MH: projectWPs
+    MH -->> M: data result
+    M ->> WS: render WP select
+    alt selectedProject != null
+    M ->> B: show assign button
+    end
+
+
+
+

@@ -1,0 +1,29 @@
+sequenceDiagram
+    actor U as User
+    participant M as assignee_home.js
+    participant P as Project Details
+    participant MH as AssigneeHome
+    participant S as Session
+    participant PD as ProjectDAO
+    participant T as TaskAssigneeDAO
+
+
+    U ->> M: select project in project list
+    M ->> MH: AJAX GET /assignee-home?action=projectDetails&project_id=?
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> PD: getProjectById(project_id)
+    PD -->> MH: selectedProject
+    MH ->> T: getAssignedWPsOfCollaboratorInProject(user.username, project_id)
+    T -->> MH: visibleWPs
+    MH ->> T: getAssignedTasksByWpInProject(user.username, project_id)
+    T -->> MH: tasksByWP
+    MH ->> MH: build project details
+    MH -->> M: data response
+
+
+
+
+
+
+

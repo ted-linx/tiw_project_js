@@ -187,7 +187,7 @@ public class ProjectDAO {
         return false;
     }
 
-    public void completeProject(int projectId) throws SQLException {
+    public void concludeProject(int projectId) throws SQLException {
         String query = "UPDATE project SET status = 'CONCLUDED' WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setInt(1, projectId);

@@ -1,0 +1,19 @@
+sequenceDiagram
+    actor U as User
+    participant LF as login.js
+    participant L as Login
+    participant UD as UserDAO
+
+   U->>LF: submit
+   LF->>L: AJAX POST /login
+
+   L->>UD: checkCredentials(username, password)
+   UD-->>L: user
+   L-->>LF: role
+
+   alt: role is ADMINISTRATIVE
+   LF->>LF: window.location.href = 'ctx/admin-home'
+   else role is TECHNICAL
+   LF->>LF: window.location.href = 'ctx/technical-home'
+   end
+

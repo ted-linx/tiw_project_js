@@ -1,0 +1,32 @@
+sequenceDiagram
+    actor U as User
+    participant M as manager_monitor_project.js
+    participant PS as Project details
+    participant B as Conclude button
+    participant SU as Success message
+    participant E as Error message
+    participant MH as ManagerHome
+    participant S as Session
+    participant PD as ProjectDAO
+
+
+    U ->> M: conclude button click
+    M ->> MH: AJAX POST /manager-home?action=concludeProject
+    MH ->> S: getAttribute(user)
+    S -->> MH: user
+    MH ->> MH: get, trim and validate post parameters
+    MH ->> PD: concludeProject(project_id)
+
+    MH -->> M: response
+    alt success
+        M ->> PS: render project details
+        M ->> B: hide conclude button
+        M ->> SU: show success message
+    else error
+        M ->> E: show error message
+    end
+
+
+
+
+

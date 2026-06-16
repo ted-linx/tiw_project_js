@@ -1,0 +1,22 @@
+sequenceDiagram
+    actor U as User
+    participant AJ as assignee_home.js
+    participant PL as Project List
+    participant AH as AssigneeHome
+    participant S as Session
+    participant PD as TaskAssigneeDAO
+
+
+    U ->> AJ: load
+    AJ ->> AH: AJAX GET /assignee-home?action=init
+    AH ->> S: getAttribute(user)
+    S -->> AH: user
+
+    AH ->> PD: getAssignedProjectsOfCollaborator(user.username)
+    PD -->> AH: assignedProjects
+    AH -->> AJ: data response
+
+    AJ ->> PL: renderProjectList()
+
+
+
