@@ -1,0 +1,22 @@
+sequenceDiagram
+    actor U as User
+    participant I as index.js
+    participant C as Component
+    participant S as Servlet
+    participant D as DAO
+    participant SE as Session
+
+    U ->> I: load
+    I ->> S: AJAX GET /servlet
+    S ->> SE: getAttribute(...)
+    SE -->> S: attribute
+    S ->> S: resp.getParameter(action)
+
+    S ->> D: getDatabaseDatas()
+    D -->> S: response
+    S ->> S: internal logic
+    S -->> I: response
+    I ->> C: render data
+
+
+
