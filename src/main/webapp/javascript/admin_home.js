@@ -26,11 +26,13 @@ import {
   let isDirty = false;
 
   initGreeting();
-  initLogout();
+  initLogout(ctx)
 
   document.addEventListener('keydown', handleHistoryShortcut);
 
-
+  function generateClientKey() {
+    return `draft-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
 
   function markDirty() {
     isDirty = true;
@@ -148,8 +150,8 @@ import {
     };
 
     normalized.tasks = Array.isArray(wp?.tasks)
-      ? wp.tasks.map((task, taskIndex) => normalizeTask(task, taskIndex, normalized))
-      : [];
+        ? wp.tasks.map((task, taskIndex) => normalizeTask(task, taskIndex, normalized))
+        : [];
 
     return normalized;
   }
@@ -158,6 +160,7 @@ import {
     const normalized = {
       ...project,
       id: project?.id ?? null,
+      clientKey: project?.clientKey ?? null,
       title: project?.title ?? 'Untitled project',
       duration: project?.duration ?? 12,
       manager: project?.manager ?? user?.username ?? '',
@@ -165,8 +168,8 @@ import {
     };
 
     normalized.workPackages = Array.isArray(project?.workPackages)
-      ? project.workPackages.map((wp, wpIndex) => normalizeWorkPackage(wp, wpIndex))
-      : [];
+        ? project.workPackages.map((wp, wpIndex) => normalizeWorkPackage(wp, wpIndex))
+        : [];
 
     return normalized;
   }
@@ -174,9 +177,10 @@ import {
   function buildEmptyProject() {
     return normalizeProject({
       id: null,
+      clientKey: generateClientKey(),
       title: 'New project',
       duration: 12,
-      manager: user?.username || '',
+      manager: (technicalUsers && technicalUsers.length > 0)? technicalUsers[0].username : '',
       status: 'CREATED',
       workPackages: []
     });
@@ -199,8 +203,8 @@ import {
       user = data.user || null;
       technicalUsers = Array.isArray(data.technicalUsers) ? data.technicalUsers : [];
       createdProjects = Array.isArray(data.createdProjects)
-        ? data.createdProjects.map(normalizeProject)
-        : [];
+          ? data.createdProjects.map(normalizeProject)
+          : [];
       currentProject = null;
       originalProjectSnapshot = null;
       undoStack = [];
@@ -233,9 +237,8 @@ import {
     allProjects.forEach((project) => {
       const li = document.createElement('li');
       const isActive = currentProject && (
-        currentProject === project ||
-        (currentProject.id != null && project.id != null && currentProject.id === project.id) ||
-        (currentProject.id == null && project.id == null && currentProject.title === project.title)
+          (currentProject.id != null && project.id != null && currentProject.id === project.id) ||
+          (currentProject.clientKey && project.clientKey && currentProject.clientKey === project.clientKey)
       );
       const isDraft = project.id == null;
 
@@ -279,8 +282,8 @@ import {
 
     const workPackages = Array.isArray(currentProject.workPackages) ? currentProject.workPackages : [];
     const wpBlocks = workPackages.length === 0
-      ? `<div class="empty-state empty-state-inline"><p>No work packages defined for this project yet.</p></div>`
-      : workPackages.map((wp, wpIndex) => renderWorkPackage(wp, wpIndex)).join('');
+        ? `<div class="empty-state empty-state-inline"><p>No work packages defined for this project yet.</p></div>`
+        : workPackages.map((wp, wpIndex) => renderWorkPackage(wp, wpIndex)).join('');
 
     const isNewProject = !currentProject.id;
 
@@ -318,8 +321,8 @@ import {
   function renderWorkPackage(wp, wpIndex) {
     const tasks = Array.isArray(wp.tasks) ? wp.tasks : [];
     const taskMarkup = tasks.length === 0
-      ? `<div class="task-empty">No tasks in this WP.</div>`
-      : `
+        ? `<div class="task-empty">No tasks in this WP.</div>`
+        : `
           <table class="task-table">
             <thead>
               <tr>
@@ -504,8 +507,8 @@ import {
     pushUndoState();
 
     const workPackages = Array.isArray(currentProject.workPackages)
-      ? currentProject.workPackages
-      : (currentProject.workPackages = []);
+        ? currentProject.workPackages
+        : (currentProject.workPackages = []);
 
     workPackages.push(normalizeWorkPackage({
       order_number: workPackages.length + 1,
@@ -527,7 +530,9 @@ import {
     if (!currentProject?.workPackages) return;
     pushUndoState();
     currentProject.workPackages.splice(wpIndex, 1);
-    currentProject.workPackages = currentProject.workPackages.map((wp, index) => normalizeWorkPackage({ ...wp, order_number: index + 1 }, index));
+    currentProject.workPackages = currentProject.workPackages.map((wp, index) =>
+        normalizeWorkPackage({ ...wp, order_number: index + 1 }, index)
+    );
     refreshDirtyState();
     renderProjectList();
     renderWorkspace();
@@ -562,7 +567,9 @@ import {
     if (!wp || !Array.isArray(wp.tasks)) return;
     pushUndoState();
     wp.tasks.splice(taskIndex, 1);
-    wp.tasks = wp.tasks.map((task, index) => normalizeTask({ ...task, order_number: index + 1 }, index, wp));
+    wp.tasks = wp.tasks.map((task, index) =>
+        normalizeTask({ ...task, order_number: index + 1 }, index, wp)
+    );
     refreshDirtyState();
     renderWorkspace();
   }
@@ -600,18 +607,26 @@ import {
         return;
       }
 
+      const previousClientKey = currentProject.clientKey;
+
       if (currentProject.id == null && data.projectId != null) {
         currentProject.id = data.projectId;
       }
 
-      const existingIndex = createdProjects.findIndex((project) => project.id != null && project.id === currentProject.id);
+      const normalizedCurrent = normalizeProject(currentProject);
+
+      const existingIndex = createdProjects.findIndex((project) =>
+          (normalizedCurrent.id != null && project.id === normalizedCurrent.id) ||
+          (previousClientKey != null && project.clientKey === previousClientKey)
+      );
+
       if (existingIndex >= 0) {
-        createdProjects[existingIndex] = normalizeProject(currentProject);
+        createdProjects[existingIndex] = normalizedCurrent;
       } else {
-        createdProjects.unshift(normalizeProject(currentProject));
+        createdProjects.unshift(normalizedCurrent);
       }
 
-      currentProject = normalizeProject(currentProject);
+      currentProject = normalizedCurrent;
       setCleanSnapshot(currentProject);
       renderProjectList();
       renderWorkspace();
@@ -623,11 +638,11 @@ import {
 
   function escapeHtml(value) {
     return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
   }
 
   if (newProjectBtn) {
@@ -639,8 +654,6 @@ import {
       renderWorkspace();
     });
   }
-
-  initLogout(ctx);
 
   loadPage();
 })();

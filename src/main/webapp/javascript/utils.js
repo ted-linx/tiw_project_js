@@ -1,21 +1,3 @@
-/**
- * utils.js — shared utilities across all pages
- *
- * Exports:
- *  - showSuccess(message)
- *  - showError(message)
- *  - clearSuccess()
- *  - clearError()
- *  - clearMessages()
- *  - initGreeting()
- *  - initLogout(ctx)
- *  - apiFetch(url, options) → { ok, data }
- */
-
-/**
- * Shows the success alert banner.
- * Expects #alert-success and #success-message in the DOM.
- */
 export function showSuccess(message) {
     const alert = document.getElementById('alert-success');
     const msg   = document.getElementById('success-message');
@@ -25,10 +7,6 @@ export function showSuccess(message) {
     alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-/**
- * Shows the error alert banner and hides success.
- * Expects #alert-error and #error-message in the DOM.
- */
 export function showError(message) {
     const alertErr  = document.getElementById('alert-error');
     const msgErr    = document.getElementById('error-message');
@@ -39,9 +17,6 @@ export function showError(message) {
     if (alertErr)  alertErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-/**
- * Hides and clears the success alert banner.
- */
 export function clearSuccess() {
     const alert = document.getElementById('alert-success');
     const msg   = document.getElementById('success-message');
@@ -49,9 +24,6 @@ export function clearSuccess() {
     if (msg)   msg.textContent = '';
 }
 
-/**
- * Hides and clears the error alert banner.
- */
 export function clearError() {
     const alert = document.getElementById('alert-error');
     const msg   = document.getElementById('error-message');
@@ -59,19 +31,11 @@ export function clearError() {
     if (msg)   msg.textContent = '';
 }
 
-/**
- * Clears both success and error banners at once.
- * Call this at the start of any async operation or on view change.
- */
 export function clearMessages() {
     clearSuccess();
     clearError();
 }
 
-/**
- * Initialises the greeting element with the logged-in user's full name.
- * Expects #greeting in the DOM and window.APP_USER.fullName.
- */
 export function initGreeting() {
     const greeting = document.getElementById('greeting');
     if (greeting && window.APP_USER?.fullName) {
@@ -79,10 +43,6 @@ export function initGreeting() {
     }
 }
 
-/**
- * Wires up the logout button (#btn-logout) to redirect to /logout.
- * @param {string} ctx  — window.APP_CONTEXT value
- */
 export function initLogout(ctx) {
     const btn = document.getElementById('btn-logout');
     if (btn) {

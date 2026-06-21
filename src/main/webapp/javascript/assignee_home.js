@@ -20,10 +20,7 @@ import {
     };
 
     initGreeting();
-
     init();
-
-
 
     async function getJSON(url) {
         const response = await fetch(url, {
@@ -70,13 +67,24 @@ import {
             renderProjectList();
 
             if (state.assignedProjects.length > 0) {
-                await selectProject(state.assignedProjects[0].id);
+                selectProject(state.assignedProjects[0].id);
             } else {
                 renderDetails();
             }
         } catch (err) {
             showError(err.message || 'Could not load collaborator data.');
         }
+    }
+
+    function selectProject(projectId) {
+        clearMessages();
+
+        state.selectedProject = state.assignedProjects.find(
+            project => Number(project.id) === Number(projectId)
+        ) || null;
+
+        renderProjectList();
+        renderDetails();
     }
 
     function renderProjectList() {
@@ -98,30 +106,17 @@ import {
             btn.type = 'button';
             btn.className = 'project-nav-btn' + (state.selectedProject?.id === project.id ? ' active' : '');
             btn.innerHTML = `
-        <span class="project-nav-title">${escapeHtml(project.title)}</span>
-        <span class="project-nav-meta">
-          <span class="status-badge badge-${String(project.status || '').toLowerCase()}">${escapeHtml(project.status || '')}</span>
-          <span>${escapeHtml(String(project.duration || 0))} mo</span>
-        </span>
-      `;
+                <span class="project-nav-title">${escapeHtml(project.title)}</span>
+                <span class="project-nav-meta">
+                  <span class="status-badge badge-${String(project.status || '').toLowerCase()}">${escapeHtml(project.status || '')}</span>
+                  <span>${escapeHtml(String(project.duration || 0))} mo</span>
+                </span>
+            `;
             btn.addEventListener('click', () => selectProject(project.id));
 
             li.appendChild(btn);
             projectNav.appendChild(li);
         });
-    }
-
-    async function selectProject(projectId) {
-        clearMessages();
-
-        try {
-            const data = await getJSON(`${ctx}/assignee-home?action=projectDetails&project_id=${encodeURIComponent(projectId)}`);
-            state.selectedProject = data.selectedProject || null;
-            renderProjectList();
-            renderDetails();
-        } catch (err) {
-            showError(err.message || 'Could not load project details.');
-        }
     }
 
     function renderDetails() {
@@ -142,90 +137,90 @@ import {
         const tasksByWp = p.tasksByWp || {};
 
         projectDetails.innerHTML = `
-      <div class="detail-title-bar">
-        <div>
-          <h2>${escapeHtml(p.title)}</h2>
-          <div class="detail-meta">
-            <span class="status-badge badge-${String(p.status || '').toLowerCase()}">${escapeHtml(p.status || '')}</span>
-            <span>Duration: M1 – M${escapeHtml(String(p.duration || 0))}</span>
-          </div>
-        </div>
-      </div>
+            <div class="detail-title-bar">
+                <div>
+                    <h2>${escapeHtml(p.title)}</h2>
+                    <div class="detail-meta">
+                        <span class="status-badge badge-${String(p.status || '').toLowerCase()}">${escapeHtml(p.status || '')}</span>
+                        <span>Duration: M1 – M${escapeHtml(String(p.duration || 0))}</span>
+                    </div>
+                </div>
+            </div>
 
-      ${wps.length === 0 ? `
-        <div class="empty-state empty-state-inline">
-          <p>No work packages assigned to you in this project.</p>
-        </div>
-      ` : `
-        <div class="wp-list">
-          ${wps.map(wp => renderWpCard(wp, tasksByWp[String(wp.id)] || tasksByWp[wp.id] || [])).join('')}
-        </div>
-      `}
-    `;
+            ${wps.length === 0 ? `
+                <div class="empty-state empty-state-inline">
+                    <p>No work packages assigned to you in this project.</p>
+                </div>
+            ` : `
+                <div class="wp-list">
+                    ${wps.map(wp => renderWpCard(wp, tasksByWp[String(wp.id)] || tasksByWp[wp.id] || [])).join('')}
+                </div>
+            `}
+        `;
 
         bindInlineEditors();
     }
 
     function renderWpCard(wp, tasks) {
         return `
-      <div class="wp-card">
-        <div class="wp-header">
-          <div class="wp-header-left">
-            <span class="wp-badge">WP${escapeHtml(String(wp.order_number))}</span>
-            <div>
-              <span class="wp-title">${escapeHtml(wp.title)}</span>
-              <span class="wp-interval">M${wp.start_month} – M${wp.end_month}</span>
-            </div>
-          </div>
-          <div class="wp-hours-summary">
-            <span class="hours-label">Worked</span>
-            <span class="hours-value worked">${totalWorkedHours(tasks)} h</span>
-          </div>
-        </div>
+            <div class="wp-card">
+                <div class="wp-header">
+                    <div class="wp-header-left">
+                        <span class="wp-badge">WP${escapeHtml(String(wp.order_number))}</span>
+                        <div>
+                            <span class="wp-title">${escapeHtml(wp.title)}</span>
+                            <span class="wp-interval">M${wp.start_month} – M${wp.end_month}</span>
+                        </div>
+                    </div>
+                    <div class="wp-hours-summary">
+                        <span class="hours-label">Worked</span>
+                        <span class="hours-value worked">${totalWorkedHours(tasks)} h</span>
+                    </div>
+                </div>
 
-        ${tasks.length ? `
-          <div class="task-table-scroll">
-            <table class="task-table monitor-task-table">
-              <thead>
-                <tr>
-                  <th scope="col">ID</th>
-                  <th scope="col">Title</th>
-                  <th scope="col">Interval</th>
-                  <th scope="col">Monthly worked hours</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${tasks.map(task => renderTaskRow(task, wp)).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : `<div class="task-empty">No assigned tasks in this WP.</div>`}
-      </div>
-    `;
+                ${tasks.length ? `
+                    <div class="task-table-scroll">
+                        <table class="task-table monitor-task-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">ID</th>
+                                    <th scope="col">Title</th>
+                                    <th scope="col">Interval</th>
+                                    <th scope="col">Monthly worked hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tasks.map(task => renderTaskRow(task, wp)).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : `<div class="task-empty">No assigned tasks in this WP.</div>`}
+            </div>
+        `;
     }
 
     function renderTaskRow(task, wp) {
         return `
-      <tr>
-        <td class="task-id-cell">
-          <span class="task-id">T${escapeHtml(String(wp.order_number))}.${escapeHtml(String(task.order_number))}</span>
-        </td>
-        <td class="task-title-cell">
-          <div>${escapeHtml(task.title)}</div>
-          <div class="task-desc-cell">${escapeHtml(task.description || '—')}</div>
-        </td>
-        <td class="task-interval-cell">
-          M${task.start_month} – M${task.end_month}
-        </td>
-        <td class="task-month-breakdown">
-          <div class="month-compare-table" style="grid-template-columns: 64px 110px;">
-            <div class="month-compare-head">Month</div>
-            <div class="month-compare-head">Worked</div>
-            ${renderWorkedMonthCells(task)}
-          </div>
-        </td>
-      </tr>
-    `;
+            <tr>
+                <td class="task-id-cell">
+                    <span class="task-id">T${escapeHtml(String(wp.order_number))}.${escapeHtml(String(task.order_number))}</span>
+                </td>
+                <td class="task-title-cell">
+                    <div>${escapeHtml(task.title)}</div>
+                    <div class="task-desc-cell">${escapeHtml(task.description || '—')}</div>
+                </td>
+                <td class="task-interval-cell">
+                    M${task.start_month} – M${task.end_month}
+                </td>
+                <td class="task-month-breakdown">
+                    <div class="month-compare-table" style="grid-template-columns: 64px 110px;">
+                        <div class="month-compare-head">Month</div>
+                        <div class="month-compare-head">Worked</div>
+                        ${renderWorkedMonthCells(task)}
+                    </div>
+                </td>
+            </tr>
+        `;
     }
 
     function renderWorkedMonthCells(task) {
@@ -233,16 +228,16 @@ import {
         for (let month = task.start_month; month <= task.end_month; month++) {
             const worked = task.worked_hours?.[month] ?? task.worked_hours?.[String(month)] ?? 0;
             cells.push(`
-        <div class="month-cell-label">M${month}</div>
-        <button
-          type="button"
-          class="month-cell-worked inline-hours-trigger"
-          data-task-id="${task.id}"
-          data-month="${month}"
-          data-value="${worked}">
-          ${worked} h
-        </button>
-      `);
+                <div class="month-cell-label">M${month}</div>
+                <button
+                    type="button"
+                    class="month-cell-worked inline-hours-trigger"
+                    data-task-id="${task.id}"
+                    data-month="${month}"
+                    data-value="${worked}">
+                    ${worked} h
+                </button>
+            `);
         }
         return cells.join('');
     }
@@ -372,6 +367,11 @@ import {
             });
         });
 
+        state.assignedProjects = state.assignedProjects.map(project =>
+            Number(project.id) === Number(state.selectedProject.id) ? state.selectedProject : project
+        );
+
+        renderProjectList();
         renderDetails();
     }
 

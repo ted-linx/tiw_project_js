@@ -45,7 +45,7 @@
       <span id="error-message"></span>
     </div>
 
-    <form id="login-form" novalidate>
+    <form id="login-form">
 
       <div class="field">
         <label for="username">Username</label>
@@ -72,7 +72,7 @@
       </button>
     </form>
 
-    <p class="hint">If you experience any issues, please contact the system administrator.</p>
+    <p class="hint">Created by Matteo d'Amato.</p>
   </main>
 </body>
 </html>

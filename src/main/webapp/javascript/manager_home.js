@@ -224,6 +224,7 @@ import { showSuccess, showError, clearMessages, initGreeting, initLogout } from 
 
             renderProjects();
             toggleAssignProjectSection();
+            document.dispatchEvent(new CustomEvent('manager:project-assigned'))
         } catch (err) {
             const structured = err?.payload;
             if (structured) {

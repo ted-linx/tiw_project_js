@@ -24,7 +24,11 @@ import {clearMessages, showError} from './utils.js';
 
     document.addEventListener('manager:save-assignment', event => {
         state.loaded = false;
-    })
+    });
+
+    document.addEventListener('manager:project-assigned', event => {
+        state.loaded = false;
+    });
 
     async function loadCollaborators() {
         try {
